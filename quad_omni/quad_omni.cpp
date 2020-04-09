@@ -132,56 +132,23 @@ void quad_omni::motorUpdate()
         // line movement; if the angle does not equal to the original one, turn it back when moving
         if(option == 0)
         {
-            if(counter == 0)
-            {
-                motor1Speed = ceil(((float)vel_y * cos(theta + (PI / 4)) - (float)vel_x * sin(theta + (PI / 4))) / radius_w);
-                motor2Speed = ceil(((float)vel_y * cos(theta + (3 * PI / 4)) - (float)vel_x * sin(theta + (3 * PI / 4))) / radius_w);
-                motor3Speed = ceil(((float)vel_y * cos(theta + (5 * PI / 4)) - (float)vel_x * sin(theta + (5 * PI / 4))) / radius_w);
-                motor4Speed = ceil(((float)vel_y * cos(theta + (7 * PI / 4)) - (float)vel_x * sin(theta + (7 * PI / 4))) / radius_w);
-            }
-            else if(counter > 0)
-            {
-                theta += (angle_per_unit * counter);
-                if(theta >=  PI)
-                {
-                    theta = PI - theta;
-                    counter -= ceil((2 * PI / angle_per_unit));
-                    counter += 2;
-                }
-                motor1Speed = ceil((vel_y * cos(theta + (PI / 4)) - vel_x * sin(theta + (PI / 4)) - vel_a * radius_r) / radius_w);
-                motor2Speed = ceil((vel_y * cos(theta + (3 * PI / 4)) - vel_x * sin(theta + (3 * PI / 4)) - vel_a * radius_r) / radius_w);
-                motor3Speed = ceil((vel_y * cos(theta + (5 * PI / 4)) - vel_x * sin(theta + (5 * PI / 4)) - vel_a * radius_r) / radius_w);
-                motor4Speed = ceil((vel_y * cos(theta + (7 * PI / 4)) - vel_x * sin(theta + (7 * PI / 4)) - vel_a * radius_r) / radius_w);
-                counter--;  
-            }
-            else if(counter < 0)
-            {
-                theta -= (angle_per_unit * counter * -1);
-                motor1Speed = ceil((vel_y * cos(theta + (PI / 4)) - vel_x * sin(theta + (PI / 4)) + vel_a * radius_r) / radius_w);
-                motor2Speed = ceil((vel_y * cos(theta + (3 * PI / 4)) - vel_x * sin(theta + (3 * PI / 4)) + vel_a * radius_r) / radius_w);
-                motor3Speed = ceil((vel_y * cos(theta + (5 * PI / 4)) - vel_x * sin(theta + (5 * PI / 4)) + vel_a * radius_r) / radius_w);
-                motor4Speed = ceil((vel_y * cos(theta + (7 * PI / 4)) - vel_x * sin(theta + (7 * PI / 4)) + vel_a * radius_r) / radius_w);
-                counter++;
-            }
+            direction = 0;
         }
         // turn left
         else if(option == 1)
         {
-            motor1Speed = ceil(vel_a * radius_r / radius_w);
-            motor2Speed = motor1Speed;
-            motor3Speed = motor1Speed;
-            motor4Speed = motor1Speed;
-            counter++;
+            direction = 1;
         }
         // turn right
         else if(option == 2)
         {
-            this->motor1Speed = ceil(-1 * vel_a * radius_r / radius_w);
-            motor2Speed = motor1Speed;
-            motor3Speed = motor1Speed;
-            motor4Speed = motor1Speed;
-            counter--;
+            direction = -1;
         }
+
+        motor1Speed = ceil(((float)vel_y * cos(theta + (PI / 4)) - (float)vel_x * sin(theta + (PI / 4)) + direction * vel_a * radius_r) / radius_w);
+        motor2Speed = ceil(((float)vel_y * cos(theta + (3 * PI / 4)) - (float)vel_x * sin(theta + (3 * PI / 4)) + direction * vel_a * radius_r) / radius_w);
+        motor3Speed = ceil(((float)vel_y * cos(theta + (5 * PI / 4)) - (float)vel_x * sin(theta + (5 * PI / 4)) + direction * vel_a * radius_r) / radius_w);
+        motor4Speed = ceil(((float)vel_y * cos(theta + (7 * PI / 4)) - (float)vel_x * sin(theta + (7 * PI / 4)) + direction * vel_a * radius_r) / radius_w);
 
         if(motor1Speed<0) {
             motor1Speed-=1;
@@ -270,12 +237,6 @@ void quad_omni::setMovementOption(int _option)
   };
     void quad_omni::setVelocityA(float _vel_a){
       vel_a = _vel_a;
-  };
-      void quad_omni::setCounter(int _counter){
-      counter = _counter;
-  };
-      void quad_omni::setAnglePerUnit(float _angle_per_unit){
-      angle_per_unit = _angle_per_unit;
   };
 
 

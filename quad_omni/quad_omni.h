@@ -22,8 +22,6 @@ public:
   void setRadiusR(float);
   void setTheta(float);
   void setVelocityA(float);
-  void setCounter(int);
-  void setAnglePerUnit(float);
   int getMotor1Speed();
   int getMotor2Speed();
   int getMotor3Speed();
@@ -44,12 +42,10 @@ private:
   float radius_w = 735.0;  // radius of the wheel
   float radius_r = 3600.0; // radius of the robot from the wheel to the center
   float theta = 0; // current angle of the robot
-  float vel_a = 10;        // angular velocity needed of the turning
-  int counter = 0.0;    // counter for returning to the original angle
+  float vel_a = 61250;        // angular velocity needed of the turning
   int vel_x = 1000.0;      // Vx
   int vel_y = 1000.0;      // Vy
-  float angle_per_unit = 0.01; // the moved angle for each count, now is one
-                               // count in every 0.02s when turning
+  int direction = 0;       // movement direction (turning)
   int option = 0; // 0 -- line movement; 1 -- turn left; 2 -- turn right
 
   // acceleration and deceleration
