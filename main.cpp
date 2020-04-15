@@ -1,7 +1,7 @@
 
 #include "USBHostXpad.h"
 #include "mbed.h"
-#include "quad_omni.h"
+#include "quad_omni/quad_omni.h"
 
 Serial pc(USBTX, USBRX);
 Thread DS4_thread;
@@ -180,16 +180,16 @@ void quad_omni_task() {
     else if (DPAD_W) {
         quad_omni_class->setVelocityX(-600000);
     }
-    if (l1) {
+    if (l1|| rstick_x <0) {
       quad_omni_class->setMovementOption(1);
 
-    } else if (r1) {
+    } else if (r1|| rstick_x >0) {
       quad_omni_class->setMovementOption(2);
 
     } else {
       quad_omni_class->setMovementOption(0);
     }
-  pc.printf("%d %d %d %d \r\n",quad_omni_class->getMotor1Speed(),quad_omni_class->getMotor2Speed(),quad_omni_class->getMotor3Speed(),quad_omni_class->getMotor4Speed() );
+    pc.printf("%d %d %d %d \r\n",quad_omni_class->getMotor1Speed(),quad_omni_class->getMotor2Speed(),quad_omni_class->getMotor3Speed(),quad_omni_class->getMotor4Speed() );
     quad_omni_class->motorUpdate();
     
   }
