@@ -145,10 +145,10 @@ void quad_omni::motorUpdate()
             direction = -1;
         }
 
-        motor1Speed = ceil(((float)vel_y * cos(theta + (PI / 4)) - (float)vel_x * sin(theta + (PI / 4)) + direction * vel_a * radius_r) / radius_w);
-        motor2Speed = ceil(((float)vel_y * cos(theta + (3 * PI / 4)) - (float)vel_x * sin(theta + (3 * PI / 4)) + direction * vel_a * radius_r) / radius_w);
-        motor3Speed = ceil(((float)vel_y * cos(theta + (5 * PI / 4)) - (float)vel_x * sin(theta + (5 * PI / 4)) + direction * vel_a * radius_r) / radius_w);
-        motor4Speed = ceil(((float)vel_y * cos(theta + (7 * PI / 4)) - (float)vel_x * sin(theta + (7 * PI / 4)) + direction * vel_a * radius_r) / radius_w);
+        motor1Speed = ceil(((float)vel_y * cos(theta + (PI / 4)) - (float)vel_x * sin(theta + (PI / 4)) + direction * vel_a * radius_r * 1.45) / radius_w);
+        motor2Speed = ceil(((float)vel_y * cos(theta + (3 * PI / 4)) - (float)vel_x * sin(theta + (3 * PI / 4)) + direction * vel_a * radius_r * 0.7) / radius_w);
+        motor3Speed = ceil(((float)vel_y * cos(theta + (5 * PI / 4)) - (float)vel_x * sin(theta + (5 * PI / 4)) + direction * vel_a * radius_r * 1.45) / radius_w);
+        motor4Speed = ceil(((float)vel_y * cos(theta + (7 * PI / 4)) - (float)vel_x * sin(theta + (7 * PI / 4)) + direction * vel_a * radius_r * 0.7) / radius_w);
 
         if(motor1Speed<0) {
             motor1Speed-=1;
@@ -175,13 +175,13 @@ void quad_omni::motorUpdate()
             motor4Speed=0;
         }
         // set velocity;
-        this->motor1->SetVelocity(-1*motor1Speed);
+        this->motor1->SetVelocity(motor1Speed);
         ThisThread::sleep_for(5);
-        this->motor2->SetVelocity(-1*motor2Speed*0.75);
+        this->motor2->SetVelocity(-1*motor2Speed*0.7);
         ThisThread::sleep_for(5);
-        this->motor3->SetVelocity(motor3Speed);
+        this->motor3->SetVelocity(-1*motor3Speed);
         ThisThread::sleep_for(5);
-        this->motor4->SetVelocity(motor4Speed*0.75);
+        this->motor4->SetVelocity(motor4Speed*0.7);
         ThisThread::sleep_for(5);
 }
 

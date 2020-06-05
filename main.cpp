@@ -12,6 +12,7 @@ volatile int r3, l3, options, share, r2, l2, r1, l1;
 volatile int lstick_x, lstick_y, rstick_x, rstick_y;
 volatile int l2_trig, r2_trig;
 
+
 void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
               int stick_rx, int stick_ry, int trigger_l, int trigger_r) {
 
@@ -175,10 +176,10 @@ void quad_omni_task() {
         quad_omni_class->setVelocityY(-300000);
     }
     if (DPAD_E) {
-        quad_omni_class->setVelocityX(600000);
+        quad_omni_class->setVelocityX(300000);
     }
     else if (DPAD_W) {
-        quad_omni_class->setVelocityX(-600000);
+        quad_omni_class->setVelocityX(-300000);
     }
     if (l1|| rstick_x <0) {
       quad_omni_class->setMovementOption(1);
