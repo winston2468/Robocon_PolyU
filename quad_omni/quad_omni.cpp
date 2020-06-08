@@ -22,7 +22,7 @@ void quad_omni::motorInitialization()
     ThisThread::sleep_for(100);
     
     //set speed to 0
-    this->motor1->stop();
+    this->motor1->SetVelocity(0);
     ThisThread::sleep_for(100);
 
         //refer to manual for more detail 
@@ -34,7 +34,7 @@ void quad_omni::motorInitialization()
     ThisThread::sleep_for(100);
     
     //set speed to 0
-    this->motor2->stop();
+    this->motor2->SetVelocity(0);
     ThisThread::sleep_for(100);
             //refer to manual for more detail 
     this->motor3->Enable();
@@ -45,7 +45,7 @@ void quad_omni::motorInitialization()
     ThisThread::sleep_for(100);
     
     //set speed to 0
-    this->motor3->stop();
+    this->motor3->SetVelocity(0);
     ThisThread::sleep_for(100);
     
             //refer to manual for more detail 
@@ -57,7 +57,7 @@ void quad_omni::motorInitialization()
     ThisThread::sleep_for(100);
     
     //set speed to 0
-    this->motor4->stop();
+    this->motor4->SetVelocity(0);
     ThisThread::sleep_for(100);
 
     
@@ -76,9 +76,13 @@ void quad_omni::motorInitialization(int _acc, int _dec)
     ThisThread::sleep_for(100); 
     this->motor1->Configvelocity(acc, dec);
     ThisThread::sleep_for(100);
-    
+    this->motor1->SetVelocity(0);
+    ThisThread::sleep_for(100);
+
     //set speed to 0
-    this->motor1->stop();
+    //this->motor1->SetVelocity(0);
+    //ThisThread::sleep_for(100);
+    this->motor1->SetVelocity(0);
     ThisThread::sleep_for(100);
 
         //refer to manual for more detail 
@@ -90,7 +94,9 @@ void quad_omni::motorInitialization(int _acc, int _dec)
     ThisThread::sleep_for(100);
     
     //set speed to 0
-    this->motor2->stop();
+    //this->motor2->SetVelocity(0);
+    //ThisThread::sleep_for(100);
+    this->motor2->SetVelocity(0);
     ThisThread::sleep_for(100);
             //refer to manual for more detail 
     this->motor3->Enable();
@@ -101,7 +107,9 @@ void quad_omni::motorInitialization(int _acc, int _dec)
     ThisThread::sleep_for(100);
     
     //set speed to 0
-    this->motor3->stop();
+    //this->motor3->SetVelocity(0);
+    //ThisThread::sleep_for(100);
+    this->motor3->SetVelocity(0);
     ThisThread::sleep_for(100);
     
             //refer to manual for more detail 
@@ -113,7 +121,9 @@ void quad_omni::motorInitialization(int _acc, int _dec)
     ThisThread::sleep_for(100);
     
     //set speed to 0
-    this->motor4->stop();
+    //this->motor4->SetVelocity(0);
+    //ThisThread::sleep_for(100);
+    this->motor4->SetVelocity(0);
     ThisThread::sleep_for(100);
 
     
