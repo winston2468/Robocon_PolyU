@@ -122,6 +122,7 @@ private:
     volatile bool dev_connected;
     TYPE dev_type;
     volatile bool dev_started;
+    Mutex ds4_mutex;
  
     USBEndpoint * int_in;
     USBEndpoint * int_out;
@@ -134,14 +135,17 @@ private:
     uint8_t stick_lx, stick_ly, stick_rx, stick_ry;
     uint8_t trigger_l, trigger_r;
     uint8_t battery;
- 
+    int len;
+    int len_listen;
     void rxHandler();
     void parseMessage();
     void (*onUpdate)(int buttons,int buttons2, int stick_lx, int stick_ly, int stick_rx, int stick_ry, int trigger_l, int trigger_r);
     void init();
     bool start();
     uint8_t output_data[32];
- 
+    uint8_t send_hid_report[32];
+    uint8_t odata[32];
+    uint8_t *data;
 };
  
 #endif

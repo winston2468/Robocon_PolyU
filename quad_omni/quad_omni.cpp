@@ -1,18 +1,17 @@
 #include "quad_omni.h"
 
-quad_omni::quad_omni(int _id1, int _id2, int _id3, int _id4)
+quad_omni::quad_omni(int _id1, int _id2, int _id3, int _id4, CAN* _can1)
 {
-    this->motor1 = new actionDrv(_id1);
-    this->motor2 = new actionDrv(_id2);
-    this->motor3 = new actionDrv(_id3);
-    this->motor4 = new actionDrv(_id4);
+    this->motor1 = new actionDrv(_id1,_can1);
+    this->motor2 = new actionDrv(_id2,_can1);
+    this->motor3 = new actionDrv(_id3,_can1);
+    this->motor4 = new actionDrv(_id4,_can1);
        
 }
 
 //Initialization HF motor with default acc dec
 void quad_omni::motorInitialization()
 {
-
     //refer to manual for more detail 
     this->motor1->Enable();
     ThisThread::sleep_for(100);
@@ -139,6 +138,7 @@ void quad_omni::motorInitialization(int _acc, int _dec)
 //motor1 use id 1, refer to the action 
 void quad_omni::motorUpdate()
 {
+     
         // line movement; if the angle does not equal to the original one, turn it back when moving
         if(option == 0)
         {
@@ -154,12 +154,17 @@ void quad_omni::motorUpdate()
         {
             direction = -1;
         }
-
+/*
         motor1Speed = ceil(((float)vel_y * cos(theta + (PI / 4)) - (float)vel_x * sin(theta + (PI / 4)) + direction * vel_a * radius_r * 1.45) / radius_w);
         motor2Speed = ceil(((float)vel_y * cos(theta + (3 * PI / 4)) - (float)vel_x * sin(theta + (3 * PI / 4)) + direction * vel_a * radius_r * 0.7) / radius_w);
         motor3Speed = ceil(((float)vel_y * cos(theta + (5 * PI / 4)) - (float)vel_x * sin(theta + (5 * PI / 4)) + direction * vel_a * radius_r * 1.45) / radius_w);
         motor4Speed = ceil(((float)vel_y * cos(theta + (7 * PI / 4)) - (float)vel_x * sin(theta + (7 * PI / 4)) + direction * vel_a * radius_r * 0.7) / radius_w);
-
+*/
+        motor1Speed = ceil(((float)vel_y * cos(theta + (PI / 4)) - (float)vel_x * sin(theta + (PI / 4)) + direction * vel_a * radius_r) / radius_w);
+        motor2Speed = ceil(((float)vel_y * cos(theta + (3 * PI / 4)) - (float)vel_x * sin(theta + (3 * PI / 4)) + direction * vel_a * radius_r) / radius_w);
+        motor3Speed = ceil(((float)vel_y * cos(theta + (5 * PI / 4)) - (float)vel_x * sin(theta + (5 * PI / 4)) + direction * vel_a * radius_r) / radius_w);
+        motor4Speed = ceil(((float)vel_y * cos(theta + (7 * PI / 4)) - (float)vel_x * sin(theta + (7 * PI / 4)) + direction * vel_a * radius_r) / radius_w);
+        /* 
         if(motor1Speed<0) {
             motor1Speed-=1;
         }
@@ -184,15 +189,17 @@ void quad_omni::motorUpdate()
                 if(motor4Speed==1) {
             motor4Speed=0;
         }
+        */
         // set velocity;
         this->motor1->SetVelocity(motor1Speed);
-        ThisThread::sleep_for(5);
-        this->motor2->SetVelocity(-1*motor2Speed*0.7);
-        ThisThread::sleep_for(5);
+        //ThisThread::sleep_for(5);
+        this->motor2->SetVelocity(motor2Speed);
+        // ThisThread::sleep_for(20);
         this->motor3->SetVelocity(-1*motor3Speed);
-        ThisThread::sleep_for(5);
-        this->motor4->SetVelocity(motor4Speed*0.7);
-        ThisThread::sleep_for(5);
+       // ThisThread::sleep_for(20);
+        this->motor4->SetVelocity(motor4Speed);
+        //ThisThread::sleep_for(100);
+        
 }
 
 

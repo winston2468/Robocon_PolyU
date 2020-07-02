@@ -12,26 +12,26 @@ static char enablemotor[] = {0x2B,0x40,0x60,0x00,0x0F,0x00,0x00,0x00};
 static char setOp[] = {0x00,0x00,0x01,0x00,0x01,0x00,0x00,0x00};
 static char setPreOp[] = {0x00,0x00,0x80,0x00,0x01,0x00,0x00,0x00};
 
-DigitalOut led1(LED1);
-CAN can1(PB_8, PB_9, 500000);
+
+
 
 int rpm_to_pulse_per_s = 500*4/60;
 
-actionDrv::actionDrv(int _id)
+actionDrv::actionDrv(int _id, CAN* _can1)
 {
     id = _id;
-       
+    can1 = _can1;
 }
 
 void actionDrv::send(char* msg)
 {
-    //if(can1.write(CANMessage(0x600+ id, msg)))
-    //{
-    // led1 = !led1;
-    //  ThisThread::sleep_for(50);    
-    //}   
+    actionDrv_mutex.lock();
     
-    while(!can1.write(CANMessage(0x600+ id, msg))) { ThisThread::sleep_for(50);}
+    while(!can1->write(CANMessage(0x600+ id, msg))) {}
+   
+    actionDrv_mutex.unlock();
+//ThisThread::sleep_for(5);
+      
 }
 
 
@@ -42,7 +42,7 @@ void actionDrv::Enable(){
     //send(enablemotor);
     
     msgenable[1] = ((id >>24)& 0xFF);
-    while(!can1.write(CANMessage(0x000, msgenable)))
+    while(!can1->write(CANMessage(0x000, msgenable)))
     ;
      ThisThread::sleep_for(300);
     send(enablemotor);
@@ -80,8 +80,11 @@ void actionDrv::send_mod(char* msg)
     //{
     // led1 = !led1;    
     //}   
+    actionDrv_mutex.lock();
+    while(!can1->write(CANMessage(0x600+ id, msg)));
     
-    while(!can1.write(CANMessage(0x600+ id, msg)));
+    actionDrv_mutex.unlock();
+    //ThisThread::sleep_for(5);
 }
  
 void actionDrv::SetVelocity_mod(int vel){

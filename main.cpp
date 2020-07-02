@@ -2,7 +2,7 @@
 #include "USBHostXpad.h"
 #include "mbed.h"
 #include "quad_omni/quad_omni.h"
-
+CAN* can1 = new CAN(PB_5, PB_6, 500000);
 Serial pc(USBTX, USBRX);
 Thread DS4_thread;
 Thread quad_omni_thread;
@@ -11,7 +11,7 @@ volatile int DPAD_NW, DPAD_W, DPAD_SW, DPAD_S, DPAD_SE, DPAD_E, DPAD_NE, DPAD_N;
 volatile int r3, l3, options, share, r2, l2, r1, l1;
 volatile int lstick_x, lstick_y, rstick_x, rstick_y;
 volatile int l2_trig, r2_trig;
-
+volatile int buttons_l;
 
 void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
               int stick_rx, int stick_ry, int trigger_l, int trigger_r) {
@@ -20,7 +20,9 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
   circle = buttons & (1 << 6);
   cross = buttons & (1 << 5);
   square = buttons & (1 << 4);
-  int buttons_l = buttons & 0x0f;
+  /* 
+
+  buttons_l = buttons & 0x0f;
   DPAD_NW = buttons_l == 0x07;
   DPAD_W = buttons_l == 0x06;
   DPAD_SW = buttons_l == 0x05;
@@ -29,7 +31,9 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
   DPAD_E = buttons_l == 0x02;
   DPAD_NE = buttons_l == 0x01;
   DPAD_N = buttons_l == 0x00;
-  r3 = buttons2 & (1 << 7);
+
+*/
+  r3 = buttons2 & (1 << 7); 
   l3 = buttons2 & (1 << 6);
   options = buttons2 & (1 << 5);
   share = buttons2 & (1 << 4);
@@ -61,8 +65,9 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
   l2_trig = trigger_l;
   r2_trig = trigger_r;
 }
-
+/* 
 // functions:if button pressed is true -> print
+
 void showbuttons() {
 
   if (triangle) {
@@ -133,6 +138,7 @@ void showbuttons() {
   pc.printf("rstick_y %d\r\n", rstick_y);
   pc.printf("--------------------------------------------\r\n");
 }
+*/
 
 // attached function, USBHostXpad onUpdate
 void onXpadEvent(int buttons, int buttons2, int stick_lx, int stick_ly,
@@ -149,7 +155,8 @@ void xpad_task() {
 
     while (!xpad.connect()) {
       // This sleep_for can be removed
-      ThisThread::sleep_for(100);
+      parseDS4(0,0,127,127,127,127,0,0);
+      ThisThread::sleep_for(1000);
     }
 
     while (xpad.connected()) {
@@ -157,16 +164,16 @@ void xpad_task() {
       // show what buttons are pressed every 0.5s
       //showbuttons();
       // This sleep_for can be removed
-      ThisThread::sleep_for(100);
+      //ThisThread::sleep_for(100);
     }
   }
 }
 
 void quad_omni_task() {
-  quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4);
+  quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4, can1);
   quad_omni_class->motorInitialization();
   while (1) {
-
+    
     quad_omni_class->setVelocityX(lstick_x * 4500);
     quad_omni_class->setVelocityY(lstick_y * 4500);
     if (DPAD_N) {
@@ -197,6 +204,7 @@ void quad_omni_task() {
 }
 
 int main() {
+    
   quad_omni_thread.start(callback(quad_omni_task));
   // motorInitialization(); //Must be on first line in function due to some
   // wried timing problems with the motor controller
