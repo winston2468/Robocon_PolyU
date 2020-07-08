@@ -2,15 +2,60 @@
 #include "USBHostXpad.h"
 #include "mbed.h"
 #include "quad_omni/quad_omni.h"
+#include "./INA3221/INA3221.h"
+#include "./DT35/DT35.h"
+
+#define RECEIVING 1;
+#define TRY1 2;
+#define TRY2 4;
+#define TRY3 6;
+#define TRY4 8;
+#define TRY5 10;
+#define BACKING1 3;
+#define BACKING2 5;
+#define BACKING3 7;
+#define BACKING4 9;
+#define STOP 0;
 
 Serial pc(USBTX, USBRX);
 Thread DS4_thread;
 Thread quad_omni_thread;
+Thread DT35_thread;
 volatile int triangle, circle, cross, square;
 volatile int DPAD_NW, DPAD_W, DPAD_SW, DPAD_S, DPAD_SE, DPAD_E, DPAD_NE, DPAD_N;
 volatile int r3, l3, options, share, r2, l2, r1, l1;
 volatile int lstick_x, lstick_y, rstick_x, rstick_y;
 volatile int l2_trig, r2_trig;
+
+volatile float PI = 3.14159265358979323846;
+volatile float theator = -PI/2;
+volatile int autoMode = 0;//
+volatile int auto_stage = STOP;
+volatile int safety_margine = 100;//
+volatile int center_distance_x = 500;//
+volatile int center_distance_y = 500;//
+volatile int sensor_distance = 450;//
+volatile int left_upper_side_distance = 200;//
+volatile int right_upper_side_distance = 200;//
+volatile int left_lower_side_distance = 200;//
+volatile int key_point_x = 4075;
+volatile int key_point_y = 6910;
+volatile int try_spot_center_x = 6150 - center_distance_x - safety_margine;
+volatile int try_spot1_center_y = 3225 - center_distance_y;
+volatile int try_spot2_center_y = 4525 - center_distance_y;
+volatile int try_spot3_center_y = 5825 - center_distance_y;
+volatile int try_spot4_center_y = 7125 - center_distance_y;
+volatile int try_spot5_center_y = 8425 - center_distance_y;
+volatile int pass_point_center_x = 1575 - center_distance_x;
+volatile int pass_point1_center_y = 9790 - center_distance_y;
+volatile int pass_point2_center_y = 9520 - center_distance_y;
+volatile int pass_point3_center_y = 9250 - center_distance_y;
+volatile int pass_point4_center_y = 8980 - center_distance_y;
+volatile int pass_point5_center_y = 8710 - center_distance_y;
+volatile int distance1 = 0; //y
+volatile int distance2 = 0; //x1
+volatile int distance3 = 0; //x2
+volatile int changing_range = 2900; // acceptable changing range of motor movement in mm/ms
 
 
 void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
@@ -142,6 +187,7 @@ void onXpadEvent(int buttons, int buttons2, int stick_lx, int stick_ly,
   parseDS4(buttons, buttons2, stick_lx, stick_ly, stick_rx, stick_ry, trigger_l,
            trigger_r);
 }
+
 void xpad_task() {
   USBHostXpad xpad;
   xpad.attachEvent(&onXpadEvent);
@@ -162,6 +208,20 @@ void xpad_task() {
   }
 }
 
+void setAutoMode(){
+    quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4);
+    quad_omni_class->motorInitialization();
+    if(autoMode == 1){
+        autoMode = 0;
+        quad_omni_class->setTheta(theator);
+    }
+    else if(autoMode == 0){
+        auto_stage++;
+        autoMode = 1;
+        quad_omni_class->setTheta(theator+PI/2);
+    }
+}
+
 void quad_omni_task() {
   quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4);
   quad_omni_class->motorInitialization();
@@ -169,6 +229,9 @@ void quad_omni_task() {
 
     quad_omni_class->setVelocityX(lstick_x * 4500);
     quad_omni_class->setVelocityY(lstick_y * 4500);
+    if (circle) {
+        setAutoMode();
+    }
     if (DPAD_N) {
         quad_omni_class->setVelocityY(300000);
     }
@@ -192,19 +255,139 @@ void quad_omni_task() {
     }
     pc.printf("%d %d %d %d \r\n",quad_omni_class->getMotor1Speed(),quad_omni_class->getMotor2Speed(),quad_omni_class->getMotor3Speed(),quad_omni_class->getMotor4Speed() );
     quad_omni_class->motorUpdate();
+    ThisThread::sleep_for(100);
     
   }
 }
 
+void DT35_task(){
+    //setup
+    DT35 *DT35_class = new DT35(PB_9,PB_8,(0x82));;
+    DT35_class->DT35_initialization(3);
+    printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(1),DT35_class->getDieID(1),DT35_class->getConfiguration(1));
+    quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4);
+    quad_omni_class->motorInitialization();
+    while (1){
+        if(distance1 == 0 || ((distance1 - changing_range) <= DT35_class->getBusVoltage(1, 1) && (distance1 + changing_range) >= DT35_class->getBusVoltage(1, 1)))
+        {
+            distance1 = DT35_class->getBusVoltage(1, 1);
+        }
+        if(distance2 == 0 || ((distance2 - changing_range) <= DT35_class->getBusVoltage(1, 2) && (distance2 + changing_range) >= DT35_class->getBusVoltage(1, 2)))
+        {
+            distance2 = DT35_class->getBusVoltage(1, 2);
+        }
+        if(distance3 == 0 || ((distance3 - changing_range) <= DT35_class->getBusVoltage(1, 3) && (distance3 + changing_range) >= DT35_class->getBusVoltage(1, 3)))
+        {
+            distance3 = DT35_class->getBusVoltage(1, 3);
+        }
+
+        if (triangle) {
+            setAutoMode();
+        }
+
+        if(DT35_class->getBusVoltage(1, 3) < DT35_class->getBusVoltage(1, 2)){
+            quad_omni_class->setMovementOption(2);
+        }
+        else if(DT35_class->getBusVoltage(1, 3) < DT35_class->getBusVoltage(1, 2)){
+            quad_omni_class->setMovementOption(1);
+        }
+        else {
+            quad_omni_class->setMovementOption(0);
+        }
+
+        if(auto_stage == 1){
+            quad_omni_class->setVelocityX((pass_point_center_x - distance2) * 230);
+            quad_omni_class->setVelocityY((distance1 - pass_point1_center_y) * 230);
+        }
+        else if(auto_stage == 2){
+            if(distance2 <= key_point_x){
+                quad_omni_class->setVelocityX((key_point_x - distance2) * 230);
+                quad_omni_class->setVelocityY((distance1 - key_point_y) * 230);
+            }
+            else{
+                quad_omni_class->setVelocityX((try_spot_center_x - distance2) * 230);
+                quad_omni_class->setVelocityY((distance1 - try_spot1_center_y) * 230);
+            }
+        }
+        else if(auto_stage == 3){
+            if(distance2 <= key_point_y){
+                quad_omni_class->setVelocityX((pass_point_center_x - distance2) * 230);
+                quad_omni_class->setVelocityY((distance1 - pass_point2_center_y) * 230);
+            }
+            else{
+                quad_omni_class->setVelocityX((key_point_x - distance2) * 230);
+                quad_omni_class->setVelocityY((distance1 - key_point_y) * 230);
+            }
+        }
+        else if(auto_stage == 4){
+            if(distance2 <= key_point_x){
+                quad_omni_class->setVelocityX((key_point_x - distance2) * 230);
+                quad_omni_class->setVelocityY((distance1 - key_point_y) * 230);
+            }
+            else{
+                quad_omni_class->setVelocityX((try_spot_center_x - distance2) * 230);
+                quad_omni_class->setVelocityY((distance1 - try_spot2_center_y) * 230);
+            }
+        }
+        else if(auto_stage == 5){
+            if(distance2 <= key_point_y){
+                quad_omni_class->setVelocityX((pass_point_center_x - distance2) * 230);
+                quad_omni_class->setVelocityY((distance1 - pass_point3_center_y) * 230);
+            }
+            else{
+                quad_omni_class->setVelocityX((key_point_x - distance2) * 230);
+                quad_omni_class->setVelocityY((distance1 - key_point_y) * 230);
+            }
+        }
+        else if(auto_stage == 6){
+            quad_omni_class->setVelocityX((try_spot_center_x - distance2) * 230);
+            quad_omni_class->setVelocityY((distance1 - try_spot3_center_y) * 230);
+        }
+        else if(auto_stage == 7){
+            quad_omni_class->setVelocityX((pass_point_center_x - distance2) * 230);
+            quad_omni_class->setVelocityY((distance1 - pass_point4_center_y) * 230);
+        }
+        else if(auto_stage == 8){
+            quad_omni_class->setVelocityX((try_spot_center_x - distance2) * 230);
+            quad_omni_class->setVelocityY((distance1 - try_spot4_center_y) * 230);
+        }
+        else if(auto_stage == 9){
+            quad_omni_class->setVelocityX((pass_point_center_x - distance2) * 230);
+            quad_omni_class->setVelocityY((distance1 - pass_point5_center_y) * 230);
+        }
+        else if(auto_stage == 10){
+            if(distance2 <= key_point_x){
+                quad_omni_class->setVelocityX((key_point_x - distance2) * 230);
+                quad_omni_class->setVelocityY((distance1 - key_point_y) * 230);
+            }
+            else{
+                quad_omni_class->setVelocityX((try_spot_center_x - distance2) * 230);
+                quad_omni_class->setVelocityY((distance1 - try_spot5_center_y) * 230);
+            }
+        }
+
+        printf("CH1:%dV   ", DT35_class->getBusVoltage(1, 1));
+        printf("CH2:%dV   ", DT35_class->getBusVoltage(1, 2));
+        printf("CH3:%dV   ", DT35_class->getBusVoltage(1, 3));
+
+        ThisThread::sleep_for(100);
+    }
+}
+
 int main() {
-  quad_omni_thread.start(callback(quad_omni_task));
-  // motorInitialization(); //Must be on first line in function due to some
-  // wried timing problems with the motor controller
-  pc.baud(115200);
-  pc.printf("--------------------------------------------\r\n");
+    if(autoMode == 0){
+      quad_omni_thread.start(callback(quad_omni_task));
+    }
+    else if(autoMode == 1){
+        DT35_thread.start(callback(DT35_task));
+    }
+    // motorInitialization(); //Must be on first line in function due to some
+    // wried timing problems with the motor controller
+    pc.baud(115200);
+    pc.printf("--------------------------------------------\r\n");
 
-  DS4_thread.start(callback(xpad_task));
+    DS4_thread.start(callback(xpad_task));
 
-  while (1) {
-  }
+    while (1) {
+    }
 }
