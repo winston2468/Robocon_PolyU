@@ -28,9 +28,10 @@ void actionDrv::send(char* msg)
     actionDrv_mutex.lock();
     
     while(!can1->write(CANMessage(0x600+ id, msg))) {}
-   
+   //pc.printf("test3");
     actionDrv_mutex.unlock();
-//ThisThread::sleep_for(5);
+    //pc.printf("test4");
+    //ThisThread::sleep_for(5);
       
 }
 
@@ -82,9 +83,11 @@ void actionDrv::send_mod(char* msg)
     //}   
     actionDrv_mutex.lock();
     while(!can1->write(CANMessage(0x600+ id, msg)));
-    
+    //pc.printf("test");
     actionDrv_mutex.unlock();
+    //pc.printf("test2");
     //ThisThread::sleep_for(5);
+    
 }
  
 void actionDrv::SetVelocity_mod(int vel){

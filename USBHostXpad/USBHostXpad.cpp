@@ -86,7 +86,7 @@ bool USBHostXpad::connect() {
 }
 
 void USBHostXpad::rxHandler() {
-  ds4_mutex.lock();
+  //ds4_mutex.lock();
   len_listen = int_in->getSize();
   len = int_in->getLengthTransferred();
 
@@ -161,13 +161,19 @@ void USBHostXpad::rxHandler() {
 */
     }
   }
-  ds4_mutex.unlock();
+  //ds4_mutex.unlock();
   if (dev) {
       //ThisThread::sleep_for(4);
     host->interruptRead(dev, int_in, report, len_listen, false);
   }
 }
 
+void USBHostXpad::interrupt_read_next(){
+      if (dev) {
+      //ThisThread::sleep_for(4);
+    host->interruptRead(dev, int_in, report, len_listen, false);
+  }
+}
 /*virtual*/ void USBHostXpad::setVidPid(uint16_t vid, uint16_t pid) {
   // we don't check VID/PID for MSD driver
   /* 

@@ -42,8 +42,8 @@ private:
   // variable for the formula calaulation
   float radius_w = 735.0;  // radius of the wheel
   float radius_r = 3600.0; // radius of the robot from the wheel to the center
-  float theta = -PI / 2; // current angle of the robot
-  float vel_a = 100;        // angular velocity needed of the turning
+  float theta = PI / 2; // current angle of the robot
+  float vel_a = 80;        // angular velocity needed of the turning
   int vel_x = 1000.0;      // Vx
   int vel_y = 1000.0;      // Vy
   int direction = 0;       // movement direction (turning)

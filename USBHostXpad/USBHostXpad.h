@@ -105,6 +105,7 @@ public:
     bool send_data(uint8_t *output_data);
     bool send_data_bt(uint8_t *output_data);
     void lookup_table_hex(uint32_t num, char *s);
+    void interrupt_read_next();
     //CRC32
     uint32_t calculate_crc32(unsigned char *p, unsigned int length);
     uint32_t update_crc32_refl(uint32_t crc, unsigned char c);
