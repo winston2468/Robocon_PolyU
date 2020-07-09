@@ -5,7 +5,7 @@
 #include <cmath>
 class quad_omni {
 public:
-  quad_omni(int, int, int, int);
+  quad_omni(int, int, int, int, CAN*);
   void motorInitialization();
   void motorInitialization(int, int);
   void motorUpdate();
@@ -29,6 +29,7 @@ public:
 
 
 private:
+   Mutex quad_omni_mutex;
   float PI = 3.14159265358979323846;
   actionDrv *motor1;
   actionDrv *motor2;
@@ -41,8 +42,8 @@ private:
   // variable for the formula calaulation
   float radius_w = 735.0;  // radius of the wheel
   float radius_r = 3600.0; // radius of the robot from the wheel to the center
-  float theta = -PI/2; // current angle of the robot
-  float vel_a = 50;        // angular velocity needed of the turning
+  float theta = PI/2; // current angle of the robot
+  float vel_a = 80;        // angular velocity needed of the turning
   float vel_a_error = 0;
   int vel_x = 1000.0;      // Vx
   int vel_y = 1000.0;      // Vy

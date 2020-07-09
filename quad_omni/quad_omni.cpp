@@ -1,18 +1,17 @@
 #include "quad_omni.h"
 
-quad_omni::quad_omni(int _id1, int _id2, int _id3, int _id4)
+quad_omni::quad_omni(int _id1, int _id2, int _id3, int _id4, CAN* _can1)
 {
-    this->motor1 = new actionDrv(_id1);
-    this->motor2 = new actionDrv(_id2);
-    this->motor3 = new actionDrv(_id3);
-    this->motor4 = new actionDrv(_id4);
+    this->motor1 = new actionDrv(_id1,_can1);
+    this->motor2 = new actionDrv(_id2,_can1);
+    this->motor3 = new actionDrv(_id3,_can1);
+    this->motor4 = new actionDrv(_id4,_can1);
        
 }
 
 //Initialization HF motor with default acc dec
 void quad_omni::motorInitialization()
 {
-
     //refer to manual for more detail 
     this->motor1->Enable();
     ThisThread::sleep_for(100);
@@ -135,6 +134,7 @@ void quad_omni::motorInitialization(int _acc, int _dec)
 //motor1 use id 1, refer to the action 
 void quad_omni::motorUpdate()
 {
+     
         // line movement; if the angle does not equal to the original one, turn it back when moving
         if(option == 0)
         {
@@ -207,7 +207,6 @@ void quad_omni::motorUpdate()
         if(motor4Speed==0) {
             motor4Speed=1;
         }
-
         // set velocity;
         this->motor1->SetVelocity(motor1Speed*3.3);
         //ThisThread::sleep_for(5);
@@ -217,7 +216,6 @@ void quad_omni::motorUpdate()
        // ThisThread::sleep_for(20);
         this->motor4->SetVelocity(motor4Speed*3.3);
         //ThisThread::sleep_for(100);
-
         ThisThread::sleep_for(5);
 }
 

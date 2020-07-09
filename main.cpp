@@ -16,16 +16,23 @@
 #define BACKING3 7;
 #define BACKING4 9;
 #define STOP 0;
+#define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
 
+CAN* can1 = new CAN(PB_5, PB_6, 500000);
 Serial pc(USBTX, USBRX);
 Thread DS4_thread;
-Thread quad_omni_thread;
+Thread quad_omni_thread
 Thread DT35_thread;
-volatile int triangle, circle, cross, square;
-volatile int DPAD_NW, DPAD_W, DPAD_SW, DPAD_S, DPAD_SE, DPAD_E, DPAD_NE, DPAD_N;
-volatile int r3, l3, options, share, r2, l2, r1, l1;
+PwmOut servo_1(PA_5);
+int servo_curr_pw = 500;
+DigitalOut relay_1(PB_9,0);
+volatile bool triangle, circle, cross, square;
+volatile bool DPAD_NW, DPAD_W, DPAD_SW, DPAD_S, DPAD_SE, DPAD_E, DPAD_NE, DPAD_N;
+volatile bool options, share, r2, l2, r1, l1;
+volatile int r3, l3;
 volatile int lstick_x, lstick_y, rstick_x, rstick_y;
 volatile int l2_trig, r2_trig;
+volatile int buttons_l;
 
 volatile float PI = 3.14159265358979323846;
 volatile float theator = -PI/2;
@@ -65,7 +72,9 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
   circle = buttons & (1 << 6);
   cross = buttons & (1 << 5);
   square = buttons & (1 << 4);
-  int buttons_l = buttons & 0x0f;
+  /* 
+
+  buttons_l = buttons & 0x0f;
   DPAD_NW = buttons_l == 0x07;
   DPAD_W = buttons_l == 0x06;
   DPAD_SW = buttons_l == 0x05;
@@ -74,7 +83,9 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
   DPAD_E = buttons_l == 0x02;
   DPAD_NE = buttons_l == 0x01;
   DPAD_N = buttons_l == 0x00;
-  r3 = buttons2 & (1 << 7);
+
+*/
+  r3 = buttons2 & (1 << 7); 
   l3 = buttons2 & (1 << 6);
   options = buttons2 & (1 << 5);
   share = buttons2 & (1 << 4);
@@ -105,9 +116,15 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
 
   l2_trig = trigger_l;
   r2_trig = trigger_r;
+    relay_1=triangle;
+    //printf("%d\n\r",triangle);
+    servo_curr_pw = constrain(cross - triangle + servo_curr_pw, 500, 2500);
+    servo_1.pulsewidth_us(servo_curr_pw);
+  
 }
-
+/* 
 // functions:if button pressed is true -> print
+
 void showbuttons() {
 
   if (triangle) {
@@ -178,33 +195,31 @@ void showbuttons() {
   pc.printf("rstick_y %d\r\n", rstick_y);
   pc.printf("--------------------------------------------\r\n");
 }
+*/
 
 // attached function, USBHostXpad onUpdate
 void onXpadEvent(int buttons, int buttons2, int stick_lx, int stick_ly,
                  int stick_rx, int stick_ry, int trigger_l, int trigger_r) {
-  // pc.printf("DS4: %02x %02x %-5d %-5d %-5d %-5d %02x %02x\r\n", buttons,
-  // buttons2, stick_lx, stick_ly, stick_rx, stick_ry, trigger_l, trigger_r);
+   /* pc.printf("DS4: %02x %02x %-5d %-5d %-5d %-5d %02x %02x\r\n", buttons,
+   buttons2, stick_lx, stick_ly, stick_rx, stick_ry, trigger_l, trigger_r);
+   */
   parseDS4(buttons, buttons2, stick_lx, stick_ly, stick_rx, stick_ry, trigger_l,
            trigger_r);
 }
 
 void xpad_task() {
-  USBHostXpad xpad;
+    USBHostXpad xpad;
   xpad.attachEvent(&onXpadEvent);
   while (1) {
 
-    while (!xpad.connect()) {
+  while (!xpad.connect()) {
       // This sleep_for can be removed
-      ThisThread::sleep_for(100);
+      parseDS4(0,0,127,127,127,127,0,0);
+      ThisThread::sleep_for(1000);
     }
 
     while (xpad.connected()) {
-
-      // show what buttons are pressed every 0.5s
-      //showbuttons();
-      // This sleep_for can be removed
-      ThisThread::sleep_for(100);
-    }
+}
   }
 }
 
@@ -223,10 +238,16 @@ void setAutoMode(){
 }
 
 void quad_omni_task() {
-  quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4);
+  quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4, can1);
   quad_omni_class->motorInitialization();
-  while (1) {
 
+  while (1) {
+      
+      // show what buttons are pressed every 0.5s
+      //showbuttons();
+      // This sleep_for can be removed
+      //ThisThread::sleep_for(100);
+    
     quad_omni_class->setVelocityX(lstick_x * 4500);
     quad_omni_class->setVelocityY(lstick_y * 4500);
     if (circle) {
@@ -243,18 +264,31 @@ void quad_omni_task() {
     }
     else if (DPAD_W) {
         quad_omni_class->setVelocityX(-300000);
-    }
-    if (l1|| rstick_x <0) {
+    }/*
+    if(rstick_x == 0 && rstick_y == 0)
+    {
+    quad_omni_class->setVelocityX(rstick_x * 1500);
+    quad_omni_class->setVelocityY(rstick_y * 1500);
+    }*/
+    if (l1) {
       quad_omni_class->setMovementOption(1);
 
-    } else if (r1|| rstick_x >0) {
+    } else if (r1) {
       quad_omni_class->setMovementOption(2);
+
+    } 
+    else if (l2) {
+      quad_omni_class->setMovementOption(3);
+
+    } else if (r2) {
+      quad_omni_class->setMovementOption(4);
 
     } else {
       quad_omni_class->setMovementOption(0);
     }
-    pc.printf("%d %d %d %d \r\n",quad_omni_class->getMotor1Speed(),quad_omni_class->getMotor2Speed(),quad_omni_class->getMotor3Speed(),quad_omni_class->getMotor4Speed() );
+    //pc.printf("%d %d %d %d \r\n",quad_omni_class->getMotor1Speed(),quad_omni_class->getMotor2Speed(),quad_omni_class->getMotor3Speed(),quad_omni_class->getMotor4Speed() );
     quad_omni_class->motorUpdate();
+    //pc.printf("--------------------------------------------\r\n");
     ThisThread::sleep_for(100);
     
   }
@@ -375,6 +409,8 @@ void DT35_task(){
 }
 
 int main() {
+    servo_1.period_us (2500);
+    servo_1.pulsewidth_us(500);
     if(autoMode == 0){
       quad_omni_thread.start(callback(quad_omni_task));
     }
@@ -385,7 +421,6 @@ int main() {
     // wried timing problems with the motor controller
     pc.baud(115200);
     pc.printf("--------------------------------------------\r\n");
-
     DS4_thread.start(callback(xpad_task));
 
     while (1) {

@@ -58,7 +58,7 @@ bool USBHostXpad::connect() {
         int_in->attach(this, &USBHostXpad::rxHandler);
                 // USB Control GET_REPORT REQUEST
         host->controlWrite(dev, 0xa1, 0x01, 0x0302, 0, 0, 0);
-        uint8_t send_hid_report[32];
+       
         send_hid_report[0] = 0x05; // report id
         send_hid_report[1] = 0xff;
 
@@ -74,7 +74,7 @@ bool USBHostXpad::connect() {
 
         host->interruptRead(dev, int_in, report, int_in->getSize(), false);
 
-        ThisThread::sleep_for(100);
+        //ThisThread::sleep_for(100);
         // led(LED_OFF);
         dev_connected = true;
         return true;
@@ -86,8 +86,9 @@ bool USBHostXpad::connect() {
 }
 
 void USBHostXpad::rxHandler() {
-  int len_listen = int_in->getSize();
-  int len = int_in->getLengthTransferred();
+  //ds4_mutex.lock();
+  len_listen = int_in->getSize();
+  len = int_in->getLengthTransferred();
 
   /*
       for (int i = 0; i < len_listen; i ++) {
@@ -95,6 +96,7 @@ void USBHostXpad::rxHandler() {
       }
       std::printf("\r\n");
   */
+  /* 
   if (dev_type == TYPE_XBOX || TYPE_DS4) {
     if (report[0] == 0x01) {
       // USB_INFO("%x %x %x %x", report[4],report[5],report[6],report[7]);
@@ -139,15 +141,42 @@ void USBHostXpad::rxHandler() {
     // %02x", len, report[0], report[1], report[2], report[3], report[4],
     // report[5],  report[6], report[8], report[9]);
   }
+*/
+  if (dev_type == TYPE_DS4) {
+    if (report[0] == 0x01) {
+      // USB_INFO("%x %x %x %x", report[4],report[5],report[6],report[7]);
+      parseMessage();
+        /* 
+              send_hid_report[0] = 0x05; // report id
+        send_hid_report[1] = 0xff;
 
+        send_hid_report[4] = 0x00;  // small rumble
+        send_hid_report[5] = 0x00;  // big rumble
+        send_hid_report[6] = 0x00;  // red
+        send_hid_report[7] = 0x00;  // green
+        send_hid_report[8] = 0xff;  // blue
+        send_hid_report[9] = 0x00;  // Time to flash bright (255 = 2.5 seconds)
+        send_hid_report[10] = 0x00; // Time to flash dark (255 = 2.5 seconds)
+        send_data(send_hid_report);
+*/
+    }
+  }
+  //ds4_mutex.unlock();
   if (dev) {
-      //ThisThread::sleep_for(1000);
+      //ThisThread::sleep_for(4);
     host->interruptRead(dev, int_in, report, len_listen, false);
   }
 }
 
+void USBHostXpad::interrupt_read_next(){
+      if (dev) {
+      //ThisThread::sleep_for(4);
+    host->interruptRead(dev, int_in, report, len_listen, false);
+  }
+}
 /*virtual*/ void USBHostXpad::setVidPid(uint16_t vid, uint16_t pid) {
   // we don't check VID/PID for MSD driver
+  /* 
   if (vid == 0x045e &&
       (pid == 0x0202 || pid == 0x0285 || pid == 0x0287 || pid == 0x0289)) {
     dev_type = TYPE_XBOX;
@@ -158,15 +187,20 @@ void USBHostXpad::rxHandler() {
   } else if (vid == 0x054C && (pid == 0x5C4 || pid == 0x09CC || pid == 0xBA0)) {
     dev_type = TYPE_DS4;
   }
+*/
+ if (vid == 0x054C && (pid == 0x5C4 || pid == 0x09CC || pid == 0xBA0)) {
+    dev_type = TYPE_DS4;
+  }
 
-  USB_INFO("setVidPid vid:%04x pid:%04x xbox:%d", vid, pid, dev_type);
+
+ // USB_INFO("setVidPid vid:%04x pid:%04x xbox:%d", vid, pid, dev_type);
 }
 
 /*virtual*/ bool USBHostXpad::parseInterface(
     uint8_t intf_nb, uint8_t intf_class, uint8_t intf_subclass,
     uint8_t intf_protocol) // Must return true if the interface should be parsed
 {
-  USB_INFO("parseInterface class:%02x subclass:%02x protocol:%02x [nb: %d - "
+  /* USB_INFO("parseInterface class:%02x subclass:%02x protocol:%02x [nb: %d - "
            "intf: %d]",
            intf_class, intf_subclass, intf_protocol, intf_nb, xpad_intf);
   if ((xpad_intf == -1) && (intf_class == 0x58) && (intf_subclass == 0x42) &&
@@ -178,7 +212,8 @@ void USBHostXpad::rxHandler() {
       (intf_protocol == 0x81)) {
     xpad_intf = intf_nb; // XBOX360W
     return true;
-  }
+      }
+      */
   if ((xpad_intf == -1) && (intf_class == 0x03) && (intf_subclass == 0x00) &&
       (intf_protocol == 0x00)) {
     xpad_intf = intf_nb; // DS4
@@ -206,8 +241,8 @@ void USBHostXpad::rxHandler() {
 }
 
 void USBHostXpad::parseMessage() {
-  uint8_t *data = report;
-
+  data = report;
+/* 
   switch (dev_type) {
   case TYPE_DS4:
     stick_lx = ((uint8_t)data[1]);
@@ -254,7 +289,17 @@ void USBHostXpad::parseMessage() {
   default:
     return;
   }
-
+*/
+    if(dev_type == TYPE_DS4){
+    stick_lx = ((uint8_t)data[1]);
+    stick_ly = ((uint8_t)data[2]);
+    stick_rx = ((uint8_t)data[3]);
+    stick_ry = ((uint8_t)data[4]);
+    buttons = ((uint8_t)data[5]);
+    buttons2 = ((uint8_t)data[6]);
+    trigger_l = (uint8_t)data[8];
+    trigger_r = (uint8_t)data[9];
+    }
   if (onUpdate) {
     (*onUpdate)(buttons, buttons2, stick_lx, stick_ly, stick_rx, stick_ry,
                 trigger_l, trigger_r);
@@ -396,7 +441,7 @@ bool USBHostXpad::rumble(uint8_t large, uint8_t small) {
 }
 
 bool USBHostXpad::send_data(uint8_t *output_data) {
-  uint8_t odata[32];
+
   memset(odata, 0, sizeof(odata));
   std::memcpy(odata, output_data, sizeof(odata));
 
