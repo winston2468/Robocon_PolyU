@@ -1,5 +1,6 @@
 #ifndef DT35_H
 #define DT35_H
+
 #include "../INA3221/INA3221.h"
 #include "mbed.h"
 #include <cmath>
@@ -21,3 +22,4 @@ class DT35
         int getConfiguration(int);
         int getBusVoltage(int, int);
 };
+#endif
