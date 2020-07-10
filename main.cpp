@@ -21,7 +21,7 @@
 CAN* can1 = new CAN(PB_5, PB_6, 500000);
 Serial pc(USBTX, USBRX);
 Thread DS4_thread;
-Thread quad_omni_thread
+Thread quad_omni_thread;
 Thread DT35_thread;
 PwmOut servo_1(PA_5);
 int servo_curr_pw = 500;
@@ -63,7 +63,18 @@ volatile int distance1 = 0; //y
 volatile int distance2 = 0; //x1
 volatile int distance3 = 0; //x2
 volatile int changing_range = 2900; // acceptable changing range of motor movement in mm/ms
-
+quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4, can1);
+void setAutoMode(){
+    if(autoMode == 1){
+        autoMode = 0;
+        quad_omni_class->setTheta(theator);
+    }
+    else if(autoMode == 0){
+        auto_stage++;
+        autoMode = 1;
+        quad_omni_class->setTheta(theator+PI/2);
+    }
+}
 
 void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
               int stick_rx, int stick_ry, int trigger_l, int trigger_r) {
@@ -117,11 +128,16 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
   l2_trig = trigger_l;
   r2_trig = trigger_r;
     relay_1=triangle;
+            if (options) {
+            //setAutoMode();
+        }
     //printf("%d\n\r",triangle);
-    servo_curr_pw = constrain(cross - triangle + servo_curr_pw, 500, 2500);
+    servo_curr_pw = constrain(cross +(- triangle) + servo_curr_pw, 500, 2500);
     servo_1.pulsewidth_us(servo_curr_pw);
   
 }
+
+
 /* 
 // functions:if button pressed is true -> print
 
@@ -223,26 +239,12 @@ void xpad_task() {
   }
 }
 
-void setAutoMode(){
-    quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4);
-    quad_omni_class->motorInitialization();
-    if(autoMode == 1){
-        autoMode = 0;
-        quad_omni_class->setTheta(theator);
-    }
-    else if(autoMode == 0){
-        auto_stage++;
-        autoMode = 1;
-        quad_omni_class->setTheta(theator+PI/2);
-    }
-}
 
 void quad_omni_task() {
-  quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4, can1);
-  quad_omni_class->motorInitialization();
-
+ 
+quad_omni_class->motorInitialization();
   while (1) {
-      
+      if(autoMode==0){
       // show what buttons are pressed every 0.5s
       //showbuttons();
       // This sleep_for can be removed
@@ -250,9 +252,7 @@ void quad_omni_task() {
     
     quad_omni_class->setVelocityX(lstick_x * 4500);
     quad_omni_class->setVelocityY(lstick_y * 4500);
-    if (circle) {
-        setAutoMode();
-    }
+
     if (DPAD_N) {
         quad_omni_class->setVelocityY(300000);
     }
@@ -290,18 +290,19 @@ void quad_omni_task() {
     quad_omni_class->motorUpdate();
     //pc.printf("--------------------------------------------\r\n");
     ThisThread::sleep_for(100);
-    
+    }
   }
 }
 
 void DT35_task(){
     //setup
-    DT35 *DT35_class = new DT35(PB_9,PB_8,(0x82));;
+    DT35 *DT35_class = new DT35(PA_8,PB_4,(0x82));
+
     DT35_class->DT35_initialization(3);
     printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(1),DT35_class->getDieID(1),DT35_class->getConfiguration(1));
-    quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4);
-    quad_omni_class->motorInitialization();
+
     while (1){
+        if(autoMode==1){
         if(distance1 == 0 || ((distance1 - changing_range) <= DT35_class->getBusVoltage(1, 1) && (distance1 + changing_range) >= DT35_class->getBusVoltage(1, 1)))
         {
             distance1 = DT35_class->getBusVoltage(1, 1);
@@ -315,9 +316,7 @@ void DT35_task(){
             distance3 = DT35_class->getBusVoltage(1, 3);
         }
 
-        if (triangle) {
-            setAutoMode();
-        }
+
 
         if(DT35_class->getBusVoltage(1, 3) < DT35_class->getBusVoltage(1, 2)){
             quad_omni_class->setMovementOption(2);
@@ -405,24 +404,25 @@ void DT35_task(){
         printf("CH3:%dV   ", DT35_class->getBusVoltage(1, 3));
 
         ThisThread::sleep_for(100);
+        }
     }
 }
 
 int main() {
+        pc.baud(115200);
+    pc.printf("--------------------------------------------\r\n");
+    
+     
     servo_1.period_us (2500);
     servo_1.pulsewidth_us(500);
-    if(autoMode == 0){
-      quad_omni_thread.start(callback(quad_omni_task));
-    }
-    else if(autoMode == 1){
-        DT35_thread.start(callback(DT35_task));
-    }
+quad_omni_thread.start(callback(quad_omni_task));
+//DT35_thread.start(callback(DT35_task));
     // motorInitialization(); //Must be on first line in function due to some
     // wried timing problems with the motor controller
-    pc.baud(115200);
-    pc.printf("--------------------------------------------\r\n");
+
     DS4_thread.start(callback(xpad_task));
 
     while (1) {
+
     }
 }
