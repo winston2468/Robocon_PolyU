@@ -24,7 +24,7 @@ Thread DS4_thread;
 Thread quad_omni_thread;
 Thread DT35_thread;
 PwmOut servo_1(PA_5);
-int servo_curr_pw = 500;
+int servo_curr_pw = 2300;
 DigitalOut relay_1(PB_9,0);
 volatile bool triangle, circle, cross, square;
 volatile bool DPAD_NW, DPAD_W, DPAD_SW, DPAD_S, DPAD_SE, DPAD_E, DPAD_NE, DPAD_N;
@@ -129,10 +129,13 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
   r2_trig = trigger_r;
     relay_1=triangle;
             if (options) {
-            //setAutoMode();
+            setAutoMode();
         }
-    //printf("%d\n\r",triangle);
-    servo_curr_pw = constrain(cross +(- triangle) + servo_curr_pw, 500, 2500);
+    //
+    servo_curr_pw = constrain(cross*7 +(- triangle)*7 + servo_curr_pw, 1800, 2200);
+    
+    printf("%d\n\ra]r\n",servo_curr_pw);
+    
     servo_1.pulsewidth_us(servo_curr_pw);
   
 }
