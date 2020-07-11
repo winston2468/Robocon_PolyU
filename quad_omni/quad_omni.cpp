@@ -162,6 +162,16 @@ void quad_omni::motorUpdate()
             direction = -1;
             vel_a = 15;
         }
+        else if(option == 5)
+        {
+            direction = 1;
+            vel_a = 50;
+        }
+        else if(option == 6)
+        {
+            direction = -1;
+            vel_a = 50;
+        }
 
         motor1Speed = ceil(((float)vel_y * cos(theta + (PI / 4)) - (float)vel_x * sin(theta + (PI / 4)) + direction * vel_a * radius_r + vel_a_error * radius_r) / radius_w);
         motor2Speed = ceil(((float)vel_y * cos(theta + (3 * PI / 4)) - (float)vel_x * sin(theta + (3 * PI / 4)) + direction * vel_a * radius_r + vel_a_error * radius_r) / radius_w);

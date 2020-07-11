@@ -325,7 +325,7 @@ void quad_omni_task() {
 
             if(auto_stage == 1){
                 quad_omni_class->setVelocityX((pass_point_center_x - distance2) * 230);
-                quad_omni_class->setVelocityY((distance1 - pass_point1_center_y) * 230);
+                quad_omni_class->setVelocityY((pass_point1_center_y - distance1) * 230);
                 if((distance2 >= pass_point_center_x)&&(distance1 <= pass_point1_center_y)){
                     setAutoMode();
                 }
