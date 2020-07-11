@@ -1,5 +1,5 @@
 
-#include "USBHostXpad.h"
+#include "./USBHostXpad/USBHostXpad.h"
 #include "mbed.h"
 #include "quad_omni/quad_omni.h"
 #include "./INA3221/INA3221.h"
@@ -21,7 +21,7 @@
 CAN* can1 = new CAN(PB_5, PB_6, 500000);
 Serial pc(USBTX, USBRX);
 Thread DS4_thread;
-Thread quad_omni_thread
+Thread quad_omni_thread;
 Thread DT35_thread;
 PwmOut servo_1(PA_5);
 int servo_curr_pw = 500;
@@ -224,7 +224,7 @@ void xpad_task() {
 }
 
 void setAutoMode(){
-    quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4);
+    quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4, can1);
     quad_omni_class->motorInitialization();
     if(autoMode == 1){
         autoMode = 0;
@@ -299,7 +299,7 @@ void DT35_task(){
     DT35 *DT35_class = new DT35(PB_9,PB_8,(0x82));;
     DT35_class->DT35_initialization(3);
     printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(1),DT35_class->getDieID(1),DT35_class->getConfiguration(1));
-    quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4);
+    quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4,can1);
     quad_omni_class->motorInitialization();
     while (1){
         if(distance1 == 0 || ((distance1 - changing_range) <= DT35_class->getBusVoltage(1, 1) && (distance1 + changing_range) >= DT35_class->getBusVoltage(1, 1)))
