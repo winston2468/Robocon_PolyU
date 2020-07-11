@@ -16,7 +16,7 @@ YET, due to the design of the chip only 1 channel can be use for one chip(if u p
 #ifndef INA3221_H
 #define INA3221_H
 
-/**
+/*
 I2Steve onn99 EIE time:bus voltage vs shunt voltage
 The bus voltage is the total voltage between power and GND. It is the sum of the load voltage and the shunt voltage.
 The load voltage is the voltage going to the load.
