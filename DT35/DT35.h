@@ -13,7 +13,7 @@ class DT35
         
 
     public:
-        DT35(PinName, PinName, uint8_t, PinName, PinName, uint8_t);
+        DT35(PinName, PinName, PinName, PinName, uint8_t, uint8_t);
         DT35(PinName, PinName, uint8_t);
         void DT35_initialization(int, int);
         void DT35_initialization(int);

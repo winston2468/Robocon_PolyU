@@ -2,13 +2,13 @@
 
     DT35::DT35(PinName sda1, PinName sci1, uint8_t address1)
     {
-        this->vSenor1 = new INA3221(sci1,sda1,address1);
+        this->vSenor1 = new INA3221(sci1, sda1, address1);
     }
 
-    DT35::DT35(PinName sda1, PinName sci1, uint8_t address1, PinName sda2, PinName sci2, uint8_t address2)
+    DT35::DT35(PinName sda1, PinName sci1, PinName sda2, PinName sci2, uint8_t address1, uint8_t address2)
     {
-        this->vSenor1 = new INA3221(sci1,sda1,address1);
-        this->vSenor2 = new INA3221(sci2,sda2,address2);
+        this->vSenor1 = new INA3221(sci1, sda1, address1);
+        this->vSenor2 = new INA3221(sci2, sda2, address2);
     }
 
     void DT35::DT35_initialization(int number_of_channel1, int number_of_channel2)
