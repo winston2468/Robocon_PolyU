@@ -23,7 +23,7 @@ Serial pc(USBTX, USBRX);
 Thread DS4_thread;
 Thread quad_omni_thread;
 PwmOut servo_1(PA_5);
-int servo_curr_pw = 500;
+int servo_curr_pw = 2300;
 DigitalOut relay_1(PB_9,0);
 volatile bool triangle, circle, cross, square;
 volatile bool DPAD_NW, DPAD_W, DPAD_SW, DPAD_S, DPAD_SE, DPAD_E, DPAD_NE, DPAD_N;
@@ -326,7 +326,7 @@ void quad_omni_task() {
 
             if(auto_stage == 1){
                 quad_omni_class->setVelocityX((pass_point_center_x - distance2) * 230);
-                quad_omni_class->setVelocityY((distance1 - pass_point1_center_y) * 230);
+                quad_omni_class->setVelocityY((pass_point1_center_y - distance1) * 230);
                 if((distance2 >= pass_point_center_x)&&(distance1 <= pass_point1_center_y)){
                     setAutoMode();
                 }
