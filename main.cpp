@@ -131,7 +131,7 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
 
   l2_trig = trigger_l;
   r2_trig = trigger_r;
-    relay_1=triangle;
+    relay_1=circle;
             if (options) {
             setAutoMode();
         }
