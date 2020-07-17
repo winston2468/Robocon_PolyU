@@ -64,7 +64,7 @@ volatile int changing_range_x1 = 2450; // acceptable changing range of motor mov
 volatile int changing_range_x2 = 3900; // acceptable changing range of motor movement in mm/ms (x fence)
 
 quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4, can1);
-DT35 *DT35_class = new DT35(PA_8,PB_4,(0x82));
+DT35 *DT35_class = new DT35(PA_8,PB_4,(0x72), (0x82), (0x92));
 
 void setAutoMode(){
     if(autoMode == 1){
@@ -129,19 +129,20 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
         rstick_y = 0;
     }
 
-  l2_trig = trigger_l;
-  r2_trig = trigger_r;
-    relay_1=circle;
-            if (options) {
+
+    l2_trig = trigger_l;
+    r2_trig = trigger_r;
+    relay_1 = circle;
+    if (square) {
+        setAutoMode();
+    }
+       if (options) {
             setAutoMode();
         }
-    //
-    servo_curr_pw = constrain(cross*7 +(- triangle)*7 + servo_curr_pw, 1800, 2200);
-    
-    printf("%d\n\ra]r\n",servo_curr_pw);
-    
-    servo_1.pulsewidth_us(servo_curr_pw);
-  
+    servo_curr_pw = constrain(cross * 7 + (-7 * triangle) + servo_curr_pw, 1800, 2200);
+  printf("%d\n\ra]r\n",servo_curr_pw);
+    servo_1.pulsewidth_us(servo_curr_pw);  
+
 }
 
 
@@ -242,6 +243,7 @@ void xpad_task() {
 
 void quad_omni_task() {
     quad_omni_class->motorInitialization();
+    printf("%d", autoMode);
     while (1) {
         if(autoMode==0){
             // show what buttons are pressed every 0.5s
@@ -264,13 +266,14 @@ void quad_omni_task() {
             else if (DPAD_W) {
                 quad_omni_class->setVelocityX(-600000);
             }
-            /*
-            if(rstick_x == 0 && rstick_y == 0)
-            {
-            quad_omni_class->setVelocityX(rstick_x * 1500);
-            quad_omni_class->setVelocityY(rstick_y * 1500);
-            }
-            */
+            
+
+            //if(rstick_x == 0 && rstick_y == 0)
+            //{
+            //quad_omni_class->setVelocityX(rstick_x * 1500);
+            //quad_omni_class->setVelocityY(rstick_y * 1500);
+            //}
+            
             if (l1) {
                 quad_omni_class->setMovementOption(1);
             } 
@@ -295,27 +298,27 @@ void quad_omni_task() {
                 distance1 = DT35_class->getBusVoltage(1, 1) + fence_y;
             }
             if(distance2 == 0 || ((distance2 - changing_range_x1) <= DT35_class->getBusVoltage(1, 2) && (distance2 + changing_range_x1) >= DT35_class->getBusVoltage(1, 2))){
-                distance2 = DT35_class->getBusVoltage(1, 2);
+                distance2 = DT35_class->getBusVoltage(2, 1);
             }
             else if((distance2 - changing_range_x2) <= DT35_class->getBusVoltage(1, 2) && (distance2 + changing_range_x2) >= DT35_class->getBusVoltage(1, 2)){
-                distance2 = DT35_class->getBusVoltage(1, 2) + pillar;
+                distance2 = DT35_class->getBusVoltage(2, 1) + pillar;
             }
             else{
-                distance2 = DT35_class->getBusVoltage(1, 2) + fence_x;
+                distance2 = DT35_class->getBusVoltage(2, 1) + fence_x;
             }
             if(distance3 == 0 || ((distance3 - changing_range_x2) <= DT35_class->getBusVoltage(1, 3) && (distance3 + changing_range_x2) >= DT35_class->getBusVoltage(1, 3))){
-                distance3 = DT35_class->getBusVoltage(1, 3);
+                distance3 = DT35_class->getBusVoltage(3, 1);
             }
             else if((distance3 - changing_range_x2) <= DT35_class->getBusVoltage(1, 2) && (distance3 + changing_range_x2) >= DT35_class->getBusVoltage(1, 2)){
-                distance3 = DT35_class->getBusVoltage(1, 2) + pillar;
+                distance3 = DT35_class->getBusVoltage(3, 1) + pillar;
             }
             else{
-                distance3 = DT35_class->getBusVoltage(1, 2) + fence_x;
+                distance3 = DT35_class->getBusVoltage(3, 1) + fence_x;
             }
 
             printf("CH1:%dV   ", DT35_class->getBusVoltage(1, 1));
-            printf("CH2:%dV   ", DT35_class->getBusVoltage(1, 2));
-            printf("CH3:%dV   ", DT35_class->getBusVoltage(1, 3));
+            printf("CH2:%dV   ", DT35_class->getBusVoltage(2, 1));
+            printf("CH3:%dV   ", DT35_class->getBusVoltage(3, 1));
 
             if(DT35_class->getBusVoltage(1, 3) < DT35_class->getBusVoltage(1, 2)){
                 quad_omni_class->setMovementOption(6);
@@ -427,6 +430,7 @@ void quad_omni_task() {
                     }
                 }
             }
+            
             ThisThread::sleep_for(100);
         }
         //pc.printf("%d %d %d %d \r\n",quad_omni_class->getMotor1Speed(),quad_omni_class->getMotor2Speed(),quad_omni_class->getMotor3Speed(),quad_omni_class->getMotor4Speed() );
@@ -445,15 +449,16 @@ void DT35_initialazation(){
 int main() {
     pc.baud(115200);
     pc.printf("--------------------------------------------\r\n");
-
-    servo_1.period_us (2500);
-    servo_1.pulsewidth_us(500);
     DT35_initialazation();
     quad_omni_thread.start(callback(quad_omni_task));
+    servo_1.period_us (2500);
+    servo_1.pulsewidth_us(500);
     DS4_thread.start(callback(xpad_task));
 
     while (1) {
+        printf("CH1:%dV   ", DT35_class->getBusVoltage(1, 1));
+        printf("CH2:%dV   ", DT35_class->getBusVoltage(2, 1));
+        printf("CH3:%dV \n", DT35_class->getBusVoltage(3, 1));
     }
-    
     return 0;
 }
