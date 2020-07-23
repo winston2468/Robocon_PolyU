@@ -135,11 +135,11 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
     if (square) {
         setAutoMode();
     }
-       if (options) {
-            setAutoMode();
-        }
-    servo_curr_pw = constrain(cross * 7 + (-7 * triangle) + servo_curr_pw, 1800, 2200);
-  printf("%d\n\ra]r\n",servo_curr_pw);
+    if (options) {
+        setAutoMode();
+    }
+    servo_curr_pw = constrain(2200 * cross  + (1800 * triangle), 1800, 2200);
+    printf("%d\n\rservo\r\n",servo_curr_pw);
     servo_1.pulsewidth_us(servo_curr_pw);  
 
 }
@@ -435,7 +435,7 @@ void quad_omni_task() {
         //pc.printf("%d %d %d %d \r\n",quad_omni_class->getMotor1Speed(),quad_omni_class->getMotor2Speed(),quad_omni_class->getMotor3Speed(),quad_omni_class->getMotor4Speed() );
         quad_omni_class->motorUpdate();
         //pc.printf("--------------------------------------------\r\n");
-        ThisThread::sleep_for(100);
+        ThisThread::sleep_for(10);
     }
 }
 
@@ -459,7 +459,6 @@ int main() {
     DS4_thread.start(callback(xpad_task));
 
     while (1) {
-        ThisThread::sleep_for(500);
     }
     return 0;
 }
