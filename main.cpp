@@ -128,14 +128,20 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
         rstick_y = 0;
     }
 
+
     l2_trig = trigger_l;
     r2_trig = trigger_r;
     relay_1 = circle;
     if (square) {
         setAutoMode();
     }
+       if (options) {
+            setAutoMode();
+        }
     servo_curr_pw = constrain(cross * 7 + (-7 * triangle) + servo_curr_pw, 1800, 2200);
+  printf("%d\n\ra]r\n",servo_curr_pw);
     servo_1.pulsewidth_us(servo_curr_pw);  
+
 }
 
 
