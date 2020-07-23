@@ -199,14 +199,13 @@ void quad_omni::motorUpdate()
         
         // set velocity;
         this->motor1->SetVelocity(motor1Speed*3.3);
-        //ThisThread::sleep_for(5);
+        ThisThread::sleep_for(20);
         this->motor2->SetVelocity(motor2Speed*3.3);
-        // ThisThread::sleep_for(20);
+        ThisThread::sleep_for(20);
         this->motor3->SetVelocity(-1*motor3Speed*3.3);
-       // ThisThread::sleep_for(20);
+        ThisThread::sleep_for(20);
         this->motor4->SetVelocity(motor4Speed*3.3);
-        //ThisThread::sleep_for(100);
-        ThisThread::sleep_for(5);
+        ThisThread::sleep_for(20);
 }
 
 

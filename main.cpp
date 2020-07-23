@@ -242,36 +242,35 @@ void xpad_task() {
 
 void quad_omni_task() {
     quad_omni_class->motorInitialization();
-    printf("%d", autoMode);
+    //pc.printf("%d\r\n", autoMode);
     while (1) {
         if(autoMode==0){
             // show what buttons are pressed every 0.5s
             //showbuttons();
             // This sleep_for can be removed
             //ThisThread::sleep_for(100);
-        
+            
             quad_omni_class->setVelocityX(lstick_x * 4500);
             quad_omni_class->setVelocityY(lstick_y * 4500);
+                        
+            if(rstick_x != 0 || rstick_y != 0)
+            {
+                quad_omni_class->setVelocityX(rstick_x * 1500);
+                quad_omni_class->setVelocityY(rstick_y * 1500);
+            }
 
             if (DPAD_N) {
-                quad_omni_class->setVelocityY(500000);
+                quad_omni_class->setVelocityY(300000);
             }
             else if (DPAD_S) {
-                quad_omni_class->setVelocityY(-500000);
+                quad_omni_class->setVelocityY(-300000);
             }
             else if (DPAD_E) {
-                quad_omni_class->setVelocityX(500000);
+                quad_omni_class->setVelocityX(300000);
             }
             else if (DPAD_W) {
-                quad_omni_class->setVelocityX(-600000);
+                quad_omni_class->setVelocityX(-300000);
             }
-            
-
-            //if(rstick_x == 0 && rstick_y == 0)
-            //{
-            //quad_omni_class->setVelocityX(rstick_x * 1500);
-            //quad_omni_class->setVelocityY(rstick_y * 1500);
-            //}
             
             if (l1) {
                 quad_omni_class->setMovementOption(1);
@@ -317,7 +316,7 @@ void quad_omni_task() {
 
             printf("CH1:%dV   ", DT35_class->getBusVoltage(1, 1));
             printf("CH2:%dV   ", DT35_class->getBusVoltage(2, 1));
-            printf("CH3:%dV   ", DT35_class->getBusVoltage(3, 1));
+            printf("CH3:%dV   \r\n", DT35_class->getBusVoltage(3, 1));
 
             if(DT35_class->getBusVoltage(1, 3) < DT35_class->getBusVoltage(1, 2)){
                 quad_omni_class->setMovementOption(6);
