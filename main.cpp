@@ -1,4 +1,3 @@
-
 #include "./USBHostXpad/USBHostXpad.h"
 #include "mbed.h"
 #include "quad_omni/quad_omni.h"
@@ -64,7 +63,7 @@ volatile int changing_range_x1 = 2450; // acceptable changing range of motor mov
 volatile int changing_range_x2 = 3900; // acceptable changing range of motor movement in mm/ms (x fence)
 
 quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4, can1);
-DT35 *DT35_class = new DT35(PA_8,PB_4,(0x72), (0x82), (0x92));
+DT35 *DT35_class = new DT35(PB_4, PA_8, (0x82), (0x84), (0x86));        //VS:0x82; SCL:0x86; SDA:0x84; GND:0x80
 
 void setAutoMode(){
     if(autoMode == 1){
@@ -286,28 +285,28 @@ void quad_omni_task() {
         }
         else if(autoMode==1){
             if(distance1 == 0 || ((distance1 - changing_range_y) <= DT35_class->getBusVoltage(1, 1) && (distance1 + changing_range_y) >= DT35_class->getBusVoltage(1, 1))){
-                distance1 = DT35_class->getBusVoltage(1, 1);
+                distance1 = DT35_class->getBusVoltage(1, 1) * 1.06;
             }
             else{
-                distance1 = DT35_class->getBusVoltage(1, 1) + fence_y;
+                distance1 = (DT35_class->getBusVoltage(1, 1) + fence_y) * 1.06;
             }
             if(distance2 == 0 || ((distance2 - changing_range_x1) <= DT35_class->getBusVoltage(1, 2) && (distance2 + changing_range_x1) >= DT35_class->getBusVoltage(1, 2))){
-                distance2 = DT35_class->getBusVoltage(2, 1);
+                distance2 = DT35_class->getBusVoltage(2, 1) * 1.06;
             }
             else if((distance2 - changing_range_x2) <= DT35_class->getBusVoltage(1, 2) && (distance2 + changing_range_x2) >= DT35_class->getBusVoltage(1, 2)){
-                distance2 = DT35_class->getBusVoltage(2, 1) + pillar;
+                distance2 = (DT35_class->getBusVoltage(2, 1) + pillar) * 1.06;
             }
             else{
-                distance2 = DT35_class->getBusVoltage(2, 1) + fence_x;
+                distance2 = (DT35_class->getBusVoltage(2, 1) + fence_x) * 1.06;
             }
             if(distance3 == 0 || ((distance3 - changing_range_x2) <= DT35_class->getBusVoltage(1, 3) && (distance3 + changing_range_x2) >= DT35_class->getBusVoltage(1, 3))){
-                distance3 = DT35_class->getBusVoltage(3, 1);
+                distance3 = DT35_class->getBusVoltage(3, 1) * 1.06;
             }
             else if((distance3 - changing_range_x2) <= DT35_class->getBusVoltage(1, 2) && (distance3 + changing_range_x2) >= DT35_class->getBusVoltage(1, 2)){
-                distance3 = DT35_class->getBusVoltage(3, 1) + pillar;
+                distance3 = (DT35_class->getBusVoltage(3, 1) + pillar) * 1.06;
             }
             else{
-                distance3 = DT35_class->getBusVoltage(3, 1) + fence_x;
+                distance3 = (DT35_class->getBusVoltage(3, 1) + fence_x) * 1.06;
             }
 
             printf("CH1:%dV   ", DT35_class->getBusVoltage(1, 1));
@@ -436,8 +435,12 @@ void quad_omni_task() {
 
 void DT35_initialazation(){
     //setup
-    DT35_class->DT35_initialization(3);
+    DT35_class->DT35_initialization(1, 1);
+    DT35_class->DT35_initialization(2, 1);
+    DT35_class->DT35_initialization(3, 1);
     printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(1),DT35_class->getDieID(1),DT35_class->getConfiguration(1));
+    printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(2),DT35_class->getDieID(2),DT35_class->getConfiguration(2));
+    printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(3),DT35_class->getDieID(3),DT35_class->getConfiguration(3));
 }
 
 int main() {
@@ -450,9 +453,7 @@ int main() {
     DS4_thread.start(callback(xpad_task));
 
     while (1) {
-        printf("CH1:%dV   ", DT35_class->getBusVoltage(1, 1));
-        printf("CH2:%dV   ", DT35_class->getBusVoltage(2, 1));
-        printf("CH3:%dV \n", DT35_class->getBusVoltage(3, 1));
+        ThisThread::sleep_for(500);
     }
     return 0;
 }

@@ -2,44 +2,75 @@
 
     DT35::DT35(PinName sda, PinName sci, uint8_t address1)
     {
-        this->vSenor1 = new INA3221(sci, sda, address1);
+        this->vSenor1 = new INA3221(sda, sci, address1);
     }
 
     DT35::DT35(PinName sda, PinName sci, uint8_t address1, uint8_t address2)
     {
-        this->vSenor1 = new INA3221(sci, sda, address1);
-        this->vSenor2 = new INA3221(sci, sda, address2);
+        this->vSenor1 = new INA3221(sda, sci, address1);
+        this->vSenor2 = new INA3221(sda, sci, address2);
     }
 
     DT35::DT35(PinName sda, PinName sci, uint8_t address1, uint8_t address2, uint8_t address3)
     {
-        this->vSenor1 = new INA3221(sci, sda, address1);
-        this->vSenor2 = new INA3221(sci, sda, address2);
-        this->vSenor3 = new INA3221(sci, sda, address3);
+        this->vSenor1 = new INA3221(sda, sci, address1);
+        this->vSenor2 = new INA3221(sda, sci, address2);
+        this->vSenor3 = new INA3221(sda, sci, address3);
     }
 
-    void DT35::DT35_initialization(int channel_number1, int channel_number2, int channel_number3)
+    void DT35::DT35_initialization(int INA3221_id, int channel_number)
     { 
-        this->vSenor1->SetMode(INA3221_MODE_BUS_CONTINUOUS);
-        this->vSenor2->SetMode(INA3221_MODE_BUS_CONTINUOUS);
-        this->vSenor3->SetMode(INA3221_MODE_BUS_CONTINUOUS);
-        this->vSenor1->EnableChannel(channel_number1);
-        this->vSenor2->EnableChannel(channel_number2);
-        this->vSenor3->EnableChannel(channel_number3);
-    }
-
-    void DT35::DT35_initialization(int channel_number1, int channel_number2)
-    { 
-        this->vSenor1->SetMode(INA3221_MODE_BUS_CONTINUOUS);
-        this->vSenor2->SetMode(INA3221_MODE_BUS_CONTINUOUS);
-        this->vSenor1->EnableChannel(channel_number1);
-        this->vSenor2->EnableChannel(channel_number2);
-    }
-
-    void DT35::DT35_initialization(int channel_number1)
-    { 
-        this->vSenor1->SetMode(INA3221_MODE_BUS_CONTINUOUS);
-        this->vSenor1->EnableChannel(1);//ch1
+        if(INA3221_id == 1){
+            if(channel_number == 1){
+                this->vSenor1->SetMode(INA3221_MODE_BUS_CONTINUOUS);
+                this->vSenor1->EnableChannel(1);
+            }
+            else if(channel_number == 2){
+                this->vSenor1->SetMode(INA3221_MODE_BUS_CONTINUOUS);
+                this->vSenor1->EnableChannel(1);
+                this->vSenor1->EnableChannel(2);
+            }
+            else if(channel_number == 3){
+                this->vSenor1->SetMode(INA3221_MODE_BUS_CONTINUOUS);
+                this->vSenor1->EnableChannel(1);
+                this->vSenor1->EnableChannel(2);
+                this->vSenor1->EnableChannel(3);
+            }
+        }
+        else if(INA3221_id == 2){
+            if(channel_number == 1){
+                this->vSenor2->SetMode(INA3221_MODE_BUS_CONTINUOUS);
+                this->vSenor2->EnableChannel(1);
+            }
+            else if(channel_number == 2){
+                this->vSenor2->SetMode(INA3221_MODE_BUS_CONTINUOUS);
+                this->vSenor2->EnableChannel(1);
+                this->vSenor2->EnableChannel(2);
+            }
+            else if(channel_number == 3){
+                this->vSenor2->SetMode(INA3221_MODE_BUS_CONTINUOUS);
+                this->vSenor2->EnableChannel(1);
+                this->vSenor2->EnableChannel(2);
+                this->vSenor2->EnableChannel(3);
+            }
+        }
+        else if(INA3221_id == 3){
+            if(channel_number == 1){
+                this->vSenor3->SetMode(INA3221_MODE_BUS_CONTINUOUS);
+                this->vSenor3->EnableChannel(1);
+            }
+            else if(channel_number == 2){
+                this->vSenor3->SetMode(INA3221_MODE_BUS_CONTINUOUS);
+                this->vSenor3->EnableChannel(1);
+                this->vSenor3->EnableChannel(2);
+            }
+            else if(channel_number == 3){
+                this->vSenor3->SetMode(INA3221_MODE_BUS_CONTINUOUS);
+                this->vSenor3->EnableChannel(1);
+                this->vSenor3->EnableChannel(2);
+                this->vSenor3->EnableChannel(3);
+            }
+        }
     }
 
     int DT35::getManufacturerID(int INA3221_id)
