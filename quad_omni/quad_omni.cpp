@@ -178,45 +178,25 @@ void quad_omni::motorUpdate()
         motor3Speed = ceil(((float)vel_y * cos(theta + (5 * PI / 4)) - (float)vel_x * sin(theta + (5 * PI / 4)) + direction * vel_a * radius_r + vel_a_error * radius_r) / radius_w);
         motor4Speed = ceil(((float)vel_y * cos(theta + (7 * PI / 4)) - (float)vel_x * sin(theta + (7 * PI / 4)) + direction * vel_a * radius_r + vel_a_error * radius_r) / radius_w);
 
-        /*
-        if(motor1Speed<0) {
-            motor1Speed-=1;
-        }
-        if(motor2Speed<0) {
-            motor2Speed-=1;
-        }
-        if(motor3Speed<0) {
-            motor3Speed-=1;
-        }
-        if(motor4Speed<0) {
-            motor4Speed-=1;
-        }
-        if(motor1Speed==1) {
-            motor1Speed=0;
-        }
-        if(motor2Speed==1) {
-            motor2Speed=0;
-        }
-        if(motor3Speed==1) {
-            motor3Speed=0;
-        }
-        if(motor4Speed==1) {
-            motor4Speed=0;
-        }
-        */
 
         if(motor1Speed==0) {
-            motor1Speed=1;
+            
+            motor1Speed=motor1stopdir;
+            motor1stopdir=-1*motor1stopdir;
         }
         if(motor2Speed==0) {
-            motor2Speed=1;
+            motor2Speed=motor2stopdir;
+            motor2stopdir=-1*motor2stopdir;
         }
         if(motor3Speed==0) {
-            motor3Speed=1;
+            motor3Speed=motor3stopdir;
+            motor3stopdir=-1*motor3stopdir;
         }
         if(motor4Speed==0) {
-            motor4Speed=1;
+            motor4Speed=motor4stopdir;
+            motor4stopdir=-1*motor4stopdir;
         }
+        
         // set velocity;
         this->motor1->SetVelocity(motor1Speed*3.3);
         //ThisThread::sleep_for(5);
