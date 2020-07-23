@@ -35,18 +35,22 @@ private:
   actionDrv *motor2;
   actionDrv *motor3;
   actionDrv *motor4;
-  int motor1Speed = 1000.0;
-  int motor2Speed = 1000.0;
-  int motor3Speed = 1000.0;
-  int motor4Speed = 1000.0;
+  int motor1Speed = 1000;
+  int motor2Speed = 1000;
+  int motor3Speed = 1000;
+  int motor4Speed = 1000;
+  int motor1stopdir = 1;
+  int motor2stopdir = 1;
+  int motor3stopdir = 1;
+  int motor4stopdir = 1;
   // variable for the formula calaulation
   float radius_w = 735.0;  // radius of the wheel
   float radius_r = 3600.0; // radius of the robot from the wheel to the center
   float theta = PI/2; // current angle of the robot
   float vel_a = 80;        // angular velocity needed of the turning
   float vel_a_error = 0;
-  int vel_x = 1000.0;      // Vx
-  int vel_y = 1000.0;      // Vy
+  int vel_x = 1000;      // Vx
+  int vel_y = 1000;      // Vy
   int direction = 0;       // movement direction (turning)
   int option = 0; // 0 -- line movement; 1 -- turn left; 2 -- turn right
 

@@ -136,11 +136,8 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
     if (square) {
         setAutoMode();
     }
-       if (options) {
-            setAutoMode();
-        }
     servo_curr_pw = constrain(cross * 7 + (-7 * triangle) + servo_curr_pw, 1800, 2200);
-  printf("%d\n\ra]r\n",servo_curr_pw);
+  printf("%d\n\rspace\n",servo_curr_pw);
     servo_1.pulsewidth_us(servo_curr_pw);  
 
 }
@@ -456,9 +453,9 @@ int main() {
     DS4_thread.start(callback(xpad_task));
 
     while (1) {
-        printf("CH1:%dV   ", DT35_class->getBusVoltage(1, 1));
-        printf("CH2:%dV   ", DT35_class->getBusVoltage(2, 1));
-        printf("CH3:%dV \n", DT35_class->getBusVoltage(3, 1));
+       // printf("CH1:%dV   ", DT35_class->getBusVoltage(1, 1));
+      //  printf("CH2:%dV   ", DT35_class->getBusVoltage(2, 1));
+      //  printf("CH3:%dV \n", DT35_class->getBusVoltage(3, 1));
     }
     return 0;
 }
