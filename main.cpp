@@ -22,7 +22,7 @@ Serial pc(USBTX, USBRX);
 Thread DS4_thread;
 Thread quad_omni_thread;
 PwmOut servo_1(PA_5);
-int servo_curr_pw = 2300;
+int servo_curr_pw = 2200;
 DigitalOut relay_1(PB_9,0);
 volatile bool triangle, circle, cross, square;
 volatile bool DPAD_NW, DPAD_W, DPAD_SW, DPAD_S, DPAD_SE, DPAD_E, DPAD_NE, DPAD_N;
@@ -138,7 +138,7 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
     if (options) {
         setAutoMode();
     }
-    servo_curr_pw = constrain(2200 * cross  + (1800 * triangle), 1800, 2200);
+    servo_curr_pw = constrain(cross * 1 + (-1 * triangle) + servo_curr_pw, 1800, 2200);
     printf("%d\n\rservo\r\n",servo_curr_pw);
     servo_1.pulsewidth_us(servo_curr_pw);  
 
