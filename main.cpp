@@ -3,7 +3,7 @@
 #include "quad_omni/quad_omni.h"
 #include "./INA3221/INA3221.h"
 #include "./DT35/DT35.h"
-
+#include "BufferedSerial.h"
 #define RECEIVING 1;
 #define TRY1 2;
 #define TRY2 4;
@@ -15,57 +15,62 @@
 #define BACKING3 7;
 #define BACKING4 9;
 #define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
+Thread DS4BT_thread;
+uint8_t DS4BT_packet[15] = {0};
 
+ BufferedSerial pc(USBTX, USBRX);
+  BufferedSerial device(PA_9, PA_10);
 CAN* can1 = new CAN(PB_5, PB_6, 500000);
-Serial pc(USBTX, USBRX);
+
 Thread DS4_thread;
 Thread quad_omni_thread;
 PwmOut servo_1(PA_5);
-volatile int servo_curr_pw = 1500;
-volatile int servo_max = 1500;
-volatile int servo_min = 1220;
-volatile int servo_backward_speed = 5;
-volatile int servo_forward_speed = 3;
+ int servo_curr_pw = 1500;
+ int servo_max = 1500;
+ int servo_min = 1220;
+ int servo_backward_speed = 5;
+ int servo_forward_speed = 3;
 DigitalOut relay_1(PB_9,0);
 volatile bool triangle, circle, cross, square;
 volatile bool DPAD_NW, DPAD_W, DPAD_SW, DPAD_S, DPAD_SE, DPAD_E, DPAD_NE, DPAD_N;
 volatile bool options, share, r2, l2, r1, l1;
-volatile int r3, l3;
+volatile bool touchpad, touchpad_finger0, touchpad_finger1, PS;
+volatile bool r3, l3;
 volatile int lstick_x, lstick_y, rstick_x, rstick_y;
 volatile int l2_trig, r2_trig;
 volatile int buttons_l;
-
-volatile float PI = 3.14159265358979323846;
-volatile float theator = -PI/2;
-volatile int autoMode = 0;
-volatile int auto_stage = 0;
-volatile int fence_x = 4340;
+bool ready = 0;
+ float PI = 3.14159265358979323846;
+ float theator = -PI/2;
+ int autoMode = 0;
+ int auto_stage = 0;
+ int fence_x = 4340;
 //volatile int fence_y = 7000;
-volatile int pillar_x = 2750;
-volatile int pillar_y1 = 5630;
-volatile int pillar_y2 = 4210;
-volatile int key_point_x = 5000;
-volatile int key_point_y = 6200;
-volatile int try_spot_center_x = 5690;
-volatile int try_spot1_center_y = 7000;
-volatile int try_spot2_center_y = 5630;
-volatile int try_spot3_center_y = 4210;
-volatile int try_spot4_center_y = 2800;
-volatile int try_spot5_center_y = 1310;
-volatile int pass_point_center_x = 840;
-volatile int pass_point1_center_y = 9900;
-volatile int pass_point2_center_y = 9900;
-volatile int pass_point3_center_y = 9690;
-volatile int pass_point4_center_y = 9450;
-volatile int pass_point5_center_y = 9210;
-volatile int distance1 = 0; //y
-volatile int distance2 = 0; //x_top
-volatile int distance3 = 0; //x_bottom
-volatile int changing_range_y1 = 5430; // acceptable changing range of motor movement in mm/ms (y pillar 1)
-volatile int changing_range_y2 = 4010; // acceptable changing range of motor movement in mm/ms (y pillar 2)
-volatile int changing_range_x1 = 2550; // acceptable changing range of motor movement in mm/ms (x pillar)
-volatile int changing_range_x2 = 4100; // acceptable changing range of motor movement in mm/ms (x fence)
-volatile int automote_scale = 1000; //scale up the motors' speed
+ int pillar_x = 2750;
+ int pillar_y1 = 5630;
+ int pillar_y2 = 4210;
+ int key_point_x = 5000;
+ int key_point_y = 6200;
+ int try_spot_center_x = 5690;
+ int try_spot1_center_y = 7000;
+ int try_spot2_center_y = 5630;
+ int try_spot3_center_y = 4210;
+ int try_spot4_center_y = 2800;
+ int try_spot5_center_y = 1310;
+ int pass_point_center_x = 840;
+ int pass_point1_center_y = 9900;
+ int pass_point2_center_y = 9900;
+ int pass_point3_center_y = 9690;
+ int pass_point4_center_y = 9450;
+ int pass_point5_center_y = 9210;
+ int distance1 = 0; //y
+ int distance2 = 0; //x_top
+ int distance3 = 0; //x_bottom
+ int changing_range_y1 = 5430; // acceptable changing range of motor movement in mm/ms (y pillar 1)
+ int changing_range_y2 = 4010; // acceptable changing range of motor movement in mm/ms (y pillar 2)
+ int changing_range_x1 = 2550; // acceptable changing range of motor movement in mm/ms (x pillar)
+ int changing_range_x2 = 4100; // acceptable changing range of motor movement in mm/ms (x fence)
+ int automote_scale = 1000; //scale up the motors' speed
 
 quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4, can1);
 DT35 *DT35_class = new DT35(PB_4, PA_8, (0x80));        //VS:0x82; SCL:0x86; SDA:0x84; GND:0x80
@@ -168,7 +173,190 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
 
 }
 
+void Parse_DS4_BT() {
+/*
+    if (DS4BT_packet[6]& (1 << 0)) {
+    pc.printf("Triangle\r\n");
+  }
+  if (DS4BT_packet[6]& (1 << 1)) {
+    pc.printf("Circle\r\n");
+  }
+  if (DS4BT_packet[6]& (1 << 2)) {
+    pc.printf("Cross\r\n");
+  }
+  if (DS4BT_packet[6]& (1 << 3)) {
+    pc.printf("Square\r\n");
+  }
+  if (DS4BT_packet[6]& (1 << 4)) {
+    pc.printf("Up\r\n");
+  }
+  if (DS4BT_packet[6]& (1 << 5)) {
+    pc.printf("Right\r\n");
+  }
+  if (DS4BT_packet[6]& (1 << 6)) {
+    pc.printf("Down\r\n");
+  }
+  if (DS4BT_packet[6]& (1 << 7)) {
+    pc.printf("Left\r\n");
+  }
+  if (DS4BT_packet[7]& (1 << 0)) {
+    pc.printf("L1\r\n");
+  }
+  if (DS4BT_packet[7]& (1 << 1)) {
+    pc.printf("L3\r\n");
+  }
+  if (DS4BT_packet[7]& (1 << 2)) {
+    pc.printf("R1\r\n");
+  }
+  if (DS4BT_packet[7]& (1 << 3)) {
+    pc.printf("R3\r\n");
+  }
+  if (DS4BT_packet[7]& (1 << 4)) {
+    pc.printf("Share\r\n");
+  }
+  if (DS4BT_packet[7]& (1 << 5)) {
+    pc.printf("Options\r\n");
+  }
+  if (DS4BT_packet[7]& (1 << 6)) {
+    pc.printf("Touchpad\r\n");
+  }
+  if (DS4BT_packet[7]& (1 << 7)) {
+    pc.printf("PS\r\n");
+  }
 
+
+
+    pc.printf("L2 %d\r\n", DS4BT_packet[4]);
+
+    pc.printf("R2 %d\r\n", DS4BT_packet[5]);
+  
+  pc.printf("lstick_x %d\r\n", DS4BT_packet[0]);
+  pc.printf("lstick_y %d\r\n", DS4BT_packet[1]);
+  pc.printf("rstick_x %d\r\n", DS4BT_packet[2]);
+  pc.printf("rstick_y %d\r\n", DS4BT_packet[3]);
+
+if (DS4BT_packet[8]& (1 << 0)) {
+    pc.printf("Touch 0\r\n");
+  }
+  if (DS4BT_packet[8]& (1 << 1)) {
+    pc.printf("Touch 1\r\n");
+  }
+  pc.printf("Angle Pitch %d\r\n", DS4BT_packet[9]);
+  pc.printf("Angle Roll %d\r\n", DS4BT_packet[10]);
+  pc.printf("Touch 0X %d\r\n", DS4BT_packet[11]);
+  pc.printf("Touch 0Y %d\r\n", DS4BT_packet[12]);
+  pc.printf("Touch 1X %d\r\n", DS4BT_packet[13]);
+  pc.printf("Touch 1Y %d\r\n", DS4BT_packet[14]);
+  
+
+  pc.printf("--------------------------------------------\r\n");
+*/
+  triangle = DS4BT_packet[6]& (1 << 0);
+  circle =DS4BT_packet[6]& (1 << 1);
+  cross = DS4BT_packet[6]& (1 << 2);
+  square = DS4BT_packet[6]& (1 << 3);
+
+  DPAD_NW = DS4BT_packet[6]& (1 << 5) &&DS4BT_packet[6]& (1 << 4);
+  DPAD_W = DS4BT_packet[6]& (1 << 5);
+  DPAD_SW = (DS4BT_packet[6]& (1 << 5) && DS4BT_packet[6]& (1 << 6));
+  DPAD_S = DS4BT_packet[6]& (1 << 6);
+  DPAD_SE = (DS4BT_packet[6]& (1 << 6) && DS4BT_packet[6]& (1 << 7));
+  DPAD_E = DS4BT_packet[6]& (1 << 7);
+  DPAD_NE = (DS4BT_packet[6]& (1 << 7) && DS4BT_packet[6]& (1 << 4));
+  DPAD_N = DS4BT_packet[6]& (1 << 4);
+  r3 = DS4BT_packet[7]& (1 << 3);
+  l3 = DS4BT_packet[7]& (1 << 1);
+  options = DS4BT_packet[7]& (1 << 5);
+  share = DS4BT_packet[7]& (1 << 4);
+  touchpad = DS4BT_packet[7]& (1 << 6);
+  PS = DS4BT_packet[7]& (1 << 7);
+  r1 = DS4BT_packet[7]& (1 << 2);
+  l1 = DS4BT_packet[7]& (1 << 0);
+
+
+  //Deadzone
+  if (!(DS4BT_packet[0] > 118 && DS4BT_packet[0] < 136)) {
+    lstick_x = DS4BT_packet[0] - 127;
+  } else {
+    lstick_x = 0;
+  }
+  if (!(DS4BT_packet[1] > 118 && DS4BT_packet[1] < 136)) {
+    lstick_y = -1*(DS4BT_packet[1] - 127);
+  } else {
+    lstick_y = 0;
+  }
+  if (!(DS4BT_packet[2] > 118 && DS4BT_packet[2] < 136)) {
+    rstick_x = DS4BT_packet[2] - 127;
+  } else {
+    rstick_x = 0;
+  }
+  if (!(DS4BT_packet[3] > 118 && DS4BT_packet[3] < 136)) {
+    rstick_y =  -1*(DS4BT_packet[3] - 127);
+  } else {
+    rstick_y = 0;
+  }
+    
+  l2_trig = DS4BT_packet[4];
+  r2_trig = DS4BT_packet[5];
+    l2_trig >=0 ? l2=l2_trig  : l2=0;
+    r2_trig >=0 ? r2=r2_trig  : r2=0;
+    relay_1 = circle;
+    if (square) {
+        if((auto_stage % 2) == 0){
+            auto_stage++;
+            setAutoMode();
+        }
+    }
+    if(options){
+        if((auto_stage % 2) == 1){
+            auto_stage++;
+            setAutoMode();
+        }
+    }
+    if(share){
+        autoMode = 0;
+    }
+    servo_curr_pw = constrain(cross * servo_backward_speed - triangle * servo_forward_speed + servo_curr_pw, servo_min, servo_max);
+    //pc.printf("%d\n\rservo\r\n",servo_curr_pw);
+    servo_1.pulsewidth_us(servo_curr_pw);  
+
+}
+
+void DS4BT_task() {
+
+  while (1) {
+    if (!device.readable())
+      ;
+    if (device.getc() == 'D') {
+      while (!device.readable())
+        ;
+      if (device.getc() == 'S') {
+
+        while (!device.readable())
+          ;
+        if (device.getc() == '4') {
+                ready=1;
+          for (int i = 0; i < 15; i++) {
+            while (!device.readable());
+              DS4BT_packet[i] = device.getc();
+            
+          }
+
+
+
+
+        }
+      }
+    }
+     if(ready){
+ Parse_DS4_BT();
+ }
+   // ThisThread::sleep_for(15);
+ }
+
+ 
+}
+/* 
 // functions:if button pressed is true -> print
 
 void showbuttons() {
@@ -239,6 +427,9 @@ void showbuttons() {
     pc.printf("rstick_y %d\r\n", rstick_y);
     pc.printf("--------------------------------------------\r\n");
 }
+*/
+
+
 
 // attached function, USBHostXpad onUpdate
 void onXpadEvent(int buttons, int buttons2, int stick_lx, int stick_ly,
@@ -341,11 +532,13 @@ void quad_omni_task() {
         else{
             distance3 = (DT35_class->getBusVoltage(1, 3));
         }
+        /* 
         pc.printf("auto:%d   ", auto_stage);
         pc.printf("mode:%d   ", autoMode);
         pc.printf("CH1:%dV   ", distance1);
         pc.printf("CH2:%dV   ", distance2);
         pc.printf("CH3:%dV   \r\n", distance3);
+        */
         if(autoMode==0){
             // show what buttons are pressed every 0.5s
             //showbuttons();
@@ -692,19 +885,23 @@ void quad_omni_task() {
 void DT35_initialazation(){
     //setup
     DT35_class->DT35_initialization(1, 3);
-    printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(1),DT35_class->getDieID(1),DT35_class->getConfiguration(1));
+    //printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(1),DT35_class->getDieID(1),DT35_class->getConfiguration(1));
     //printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(2),DT35_class->getDieID(2),DT35_class->getConfiguration(2));
     //printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(3),DT35_class->getDieID(3),DT35_class->getConfiguration(3));
 }
 
 int main() {
-    pc.baud(115200);
+   device.baud(115200);
+pc.baud(115200);
+
+   
     pc.printf("--------------------------------------------\r\n");
     DT35_initialazation();
     quad_omni_thread.start(callback(quad_omni_task));
-    DS4_thread.start(callback(xpad_task));
+    //DS4_thread.start(callback(xpad_task));
     servo_1.period_us (2500);
     servo_1.pulsewidth_us(500);
+     DS4BT_thread.start(callback(DS4BT_task));
     while (1) {
     }
     return 0;
