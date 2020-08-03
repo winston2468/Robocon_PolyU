@@ -35,10 +35,10 @@ private:
   actionDrv *motor2;
   actionDrv *motor3;
   actionDrv *motor4;
-  int motor1Speed = 1000;
-  int motor2Speed = 1000;
-  int motor3Speed = 1000;
-  int motor4Speed = 1000;
+  int motor1Speed = 1;
+  int motor2Speed = 1;
+  int motor3Speed = 1;
+  int motor4Speed = 1;
   int motor1stopdir = 1;
   int motor2stopdir = 1;
   int motor3stopdir = 1;
@@ -49,14 +49,16 @@ private:
   float theta = PI/2; // current angle of the robot
   float vel_a = 80;        // angular velocity needed of the turning
   float vel_a_error = 0;
-  int vel_x = 1000;      // Vx
-  int vel_y = 1000;      // Vy
+  int vel_x = 1;      // Vx
+  int vel_y = 1;      // Vy
   int direction = 0;       // movement direction (turning)
   int option = 0; // 0 -- line movement; 1 -- turn left; 2 -- turn right
 
   // acceleration and deceleration
-  int acc = 1000000;
-  int dec = 1000000;
+  //int acc = 1000000;
+  //int dec = 1000000;
+  int acc = 2000000;
+  int dec = 2000000;
 };
 
 #endif

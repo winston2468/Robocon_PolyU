@@ -155,22 +155,22 @@ void quad_omni::motorUpdate()
         else if(option == 3)
         {
             direction = 1;
-            vel_a = 15;
+            vel_a = 10;
         }
         else if(option == 4)
         {
             direction = -1;
-            vel_a = 15;
+            vel_a = 10;
         }
         else if(option == 5)
         {
             direction = 1;
-            vel_a = 50;
+            vel_a = 7;
         }
         else if(option == 6)
         {
             direction = -1;
-            vel_a = 50;
+            vel_a = 7;
         }
 
         motor1Speed = ceil(((float)vel_y * cos(theta + (PI / 4)) - (float)vel_x * sin(theta + (PI / 4)) + direction * vel_a * radius_r + vel_a_error * radius_r) / radius_w);
@@ -198,15 +198,14 @@ void quad_omni::motorUpdate()
         }
         
         // set velocity;
-        this->motor1->SetVelocity(motor1Speed*3.3);
-        //ThisThread::sleep_for(5);
-        this->motor2->SetVelocity(motor2Speed*3.3);
-        // ThisThread::sleep_for(20);
-        this->motor3->SetVelocity(-1*motor3Speed*3.3);
-       // ThisThread::sleep_for(20);
-        this->motor4->SetVelocity(motor4Speed*3.3);
-        //ThisThread::sleep_for(100);
-        ThisThread::sleep_for(5);
+        this->motor1->SetVelocity(-1*motor1Speed);
+        ThisThread::sleep_for(20);
+        this->motor2->SetVelocity(motor2Speed);
+        ThisThread::sleep_for(20);
+        this->motor3->SetVelocity(-1*motor3Speed);
+        ThisThread::sleep_for(20);
+        this->motor4->SetVelocity(motor4Speed);
+        ThisThread::sleep_for(20);
 }
 
 

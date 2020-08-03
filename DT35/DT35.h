@@ -16,9 +16,7 @@ class DT35
         DT35(PinName, PinName, uint8_t, uint8_t, uint8_t);
         DT35(PinName, PinName, uint8_t, uint8_t);
         DT35(PinName, PinName, uint8_t);
-        void DT35_initialization(int, int, int);
         void DT35_initialization(int, int);
-        void DT35_initialization(int);
         int getManufacturerID(int);
         int getDieID(int);
         int getConfiguration(int);

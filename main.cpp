@@ -1,4 +1,3 @@
-
 #include "./USBHostXpad/USBHostXpad.h"
 #include "mbed.h"
 #include "quad_omni/quad_omni.h"
@@ -15,7 +14,6 @@
 #define BACKING2 5;
 #define BACKING3 7;
 #define BACKING4 9;
-#define STOP 0;
 #define constrain(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
 
 CAN* can1 = new CAN(PB_5, PB_6, 500000);
@@ -23,7 +21,11 @@ Serial pc(USBTX, USBRX);
 Thread DS4_thread;
 Thread quad_omni_thread;
 PwmOut servo_1(PA_5);
-int servo_curr_pw = 2300;
+volatile int servo_curr_pw = 1500;
+volatile int servo_max = 1500;
+volatile int servo_min = 1220;
+volatile int servo_backward_speed = 5;
+volatile int servo_forward_speed = 3;
 DigitalOut relay_1(PB_9,0);
 volatile bool triangle, circle, cross, square;
 volatile bool DPAD_NW, DPAD_W, DPAD_SW, DPAD_S, DPAD_SE, DPAD_E, DPAD_NE, DPAD_N;
@@ -36,45 +38,57 @@ volatile int buttons_l;
 volatile float PI = 3.14159265358979323846;
 volatile float theator = -PI/2;
 volatile int autoMode = 0;
-volatile int auto_stage = STOP;
-volatile int safety_margine = 100;//
-volatile int center_distance_x = 500;//
-volatile int fence_x = 4075;//
-volatile int fence_y = 4005;//
-volatile int pillar = 2575;//
-volatile int key_point_x = 4075;
-volatile int key_point_y = 6910;
-volatile int try_spot_center_x = 6150 - center_distance_x - safety_margine;
-volatile int try_spot1_center_y = 3225;
-volatile int try_spot2_center_y = 4525;
-volatile int try_spot3_center_y = 5825;
-volatile int try_spot4_center_y = 7125;
-volatile int try_spot5_center_y = 8425;
-volatile int pass_point_center_x = 1575 - center_distance_x - safety_margine;
-volatile int pass_point1_center_y = 9790;
-volatile int pass_point2_center_y = 9520;
-volatile int pass_point3_center_y = 9250;
-volatile int pass_point4_center_y = 8980;
-volatile int pass_point5_center_y = 8710;
+volatile int auto_stage = 0;
+volatile int fence_x = 4340;
+//volatile int fence_y = 7000;
+volatile int pillar_x = 2750;
+volatile int pillar_y1 = 5630;
+volatile int pillar_y2 = 4210;
+volatile int key_point_x = 5000;
+volatile int key_point_y = 6200;
+volatile int try_spot_center_x = 5690;
+volatile int try_spot1_center_y = 7000;
+volatile int try_spot2_center_y = 5630;
+volatile int try_spot3_center_y = 4210;
+volatile int try_spot4_center_y = 2800;
+volatile int try_spot5_center_y = 1310;
+volatile int pass_point_center_x = 840;
+volatile int pass_point1_center_y = 9900;
+volatile int pass_point2_center_y = 9900;
+volatile int pass_point3_center_y = 9690;
+volatile int pass_point4_center_y = 9450;
+volatile int pass_point5_center_y = 9210;
 volatile int distance1 = 0; //y
 volatile int distance2 = 0; //x_top
 volatile int distance3 = 0; //x_bottom
-volatile int changing_range_y = 3830; // acceptable changing range of motor movement in mm/ms (y fence)
-volatile int changing_range_x1 = 2450; // acceptable changing range of motor movement in mm/ms (x pillar)
-volatile int changing_range_x2 = 3900; // acceptable changing range of motor movement in mm/ms (x fence)
+volatile int changing_range_y1 = 5430; // acceptable changing range of motor movement in mm/ms (y pillar 1)
+volatile int changing_range_y2 = 4010; // acceptable changing range of motor movement in mm/ms (y pillar 2)
+volatile int changing_range_x1 = 2550; // acceptable changing range of motor movement in mm/ms (x pillar)
+volatile int changing_range_x2 = 4100; // acceptable changing range of motor movement in mm/ms (x fence)
+volatile int automote_scale = 1000; //scale up the motors' speed
 
 quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4, can1);
-DT35 *DT35_class = new DT35(PA_8,PB_4,(0x72), (0x82), (0x92));
+DT35 *DT35_class = new DT35(PB_4, PA_8, (0x80));        //VS:0x82; SCL:0x86; SDA:0x84; GND:0x80
 
 void setAutoMode(){
     if(autoMode == 1){
         autoMode = 0;
-        quad_omni_class->setTheta(theator);
+        quad_omni_class->setTheta(theator+PI);
     }
-    else if(autoMode == 0){
-        auto_stage++;
+    if(autoMode == 0){
         autoMode = 1;
-        quad_omni_class->setTheta(theator+PI/2);
+        quad_omni_class->setTheta(theator+3*PI/2);
+    }
+}
+
+void servo_auto(){
+    for(servo_curr_pw; servo_curr_pw > servo_min; servo_curr_pw -= servo_forward_speed){
+        //pc.printf("%d\n\rservo\r\n",servo_curr_pw);
+        servo_1.pulsewidth_us(servo_curr_pw); 
+    }
+    for(servo_curr_pw; servo_curr_pw < servo_max; servo_curr_pw += servo_backward_speed){
+        //pc.printf("%d\n\rservo\r\n",servo_curr_pw);
+        servo_1.pulsewidth_us(servo_curr_pw); 
     }
 }
 
@@ -134,10 +148,22 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
     r2_trig = trigger_r;
     relay_1 = circle;
     if (square) {
-        setAutoMode();
+        if((auto_stage % 2) == 0){
+            auto_stage++;
+            setAutoMode();
+        }
     }
-    servo_curr_pw = constrain(cross * 7 + (-7 * triangle) + servo_curr_pw, 1800, 2200);
-  printf("%d\n\rspace\n",servo_curr_pw);
+    if(options){
+        if((auto_stage % 2) == 1){
+            auto_stage++;
+            setAutoMode();
+        }
+    }
+    if(share){
+        autoMode = 0;
+    }
+    servo_curr_pw = constrain(cross * servo_backward_speed - triangle * servo_forward_speed + servo_curr_pw, servo_min, servo_max);
+    //pc.printf("%d\n\rservo\r\n",servo_curr_pw);
     servo_1.pulsewidth_us(servo_curr_pw);  
 
 }
@@ -217,7 +243,8 @@ void showbuttons() {
 // attached function, USBHostXpad onUpdate
 void onXpadEvent(int buttons, int buttons2, int stick_lx, int stick_ly,
                  int stick_rx, int stick_ry, int trigger_l, int trigger_r) {
-    /* pc.printf("DS4: %02x %02x %-5d %-5d %-5d %-5d %02x %02x\r\n", buttons,
+    /* 
+    pc.printf("DS4: %02x %02x %-5d %-5d %-5d %-5d %02x %02x\r\n", buttons,
     buttons2, stick_lx, stick_ly, stick_rx, stick_ry, trigger_l, trigger_r);
     */
     parseDS4(buttons, buttons2, stick_lx, stick_ly, stick_rx, stick_ry, trigger_l,
@@ -240,207 +267,434 @@ void xpad_task() {
 
 void quad_omni_task() {
     quad_omni_class->motorInitialization();
-    printf("%d", autoMode);
+    //pc.printf("%d\r\n", autoMode);
     while (1) {
+        if (l1) {
+            quad_omni_class->setMovementOption(1);
+        } 
+        else if (r1) {
+            quad_omni_class->setMovementOption(2);
+        } 
+        else if (l2) {
+            quad_omni_class->setMovementOption(3);
+        } 
+        else if (r2) {
+            quad_omni_class->setMovementOption(4);
+        } 
+        else {
+            quad_omni_class->setMovementOption(0);
+        }
+        if(distance1 >= pillar_y1){
+            if((distance1 - changing_range_y1) >= DT35_class->getBusVoltage(1, 1)){
+                distance1 = (DT35_class->getBusVoltage(1, 1) + pillar_y1);
+            }
+            else{
+                distance1 = DT35_class->getBusVoltage(1, 1);
+            }
+        }
+        else if(distance1 >= pillar_y2){
+            if((distance1 - changing_range_y2) >= DT35_class->getBusVoltage(1, 1)){
+                distance1 = (DT35_class->getBusVoltage(1, 1) + pillar_y2);
+            }
+            else{
+                distance1 = DT35_class->getBusVoltage(1, 1);
+            }
+        }
+        else{
+            distance1 = (DT35_class->getBusVoltage(1, 1));
+        }
+        if(distance2 >= fence_x){
+            if((distance2 - changing_range_x2) >= DT35_class->getBusVoltage(1, 2)){
+                distance2 = (DT35_class->getBusVoltage(1, 2) + fence_x);
+            }
+            else{
+                distance2 = DT35_class->getBusVoltage(1, 2);
+            }
+        }
+        else if(distance2 >= pillar_x){
+            if((distance2 - changing_range_x1) >= DT35_class->getBusVoltage(1, 2)){
+                distance2 = (DT35_class->getBusVoltage(1, 2) + pillar_x);
+            }
+            else{
+                distance2 = DT35_class->getBusVoltage(1, 2);
+            }
+        }
+        else{
+            distance2 = (DT35_class->getBusVoltage(1, 2));
+        }
+        if(distance3 >= fence_x){
+            if((distance3 - changing_range_x2) >= DT35_class->getBusVoltage(1, 3)){
+                distance3 = (DT35_class->getBusVoltage(1, 3) + fence_x);
+            }
+            else{
+                distance3 = DT35_class->getBusVoltage(1, 3);
+            }
+        }
+        else if(distance3 >= pillar_x){
+            if((distance3 - changing_range_x1) >= DT35_class->getBusVoltage(1, 3)){
+                distance3 = (DT35_class->getBusVoltage(1, 3) + pillar_x);
+            }
+            else{
+                distance3 = DT35_class->getBusVoltage(1, 3);
+            }
+        }
+        else{
+            distance3 = (DT35_class->getBusVoltage(1, 3));
+        }
+        pc.printf("auto:%d   ", auto_stage);
+        pc.printf("mode:%d   ", autoMode);
+        pc.printf("CH1:%dV   ", distance1);
+        pc.printf("CH2:%dV   ", distance2);
+        pc.printf("CH3:%dV   \r\n", distance3);
         if(autoMode==0){
             // show what buttons are pressed every 0.5s
             //showbuttons();
             // This sleep_for can be removed
             //ThisThread::sleep_for(100);
-        
-            quad_omni_class->setVelocityX(lstick_x * 4500);
-            quad_omni_class->setVelocityY(lstick_y * 4500);
+            
+            quad_omni_class->setVelocityX(lstick_x * 7000);
+            quad_omni_class->setVelocityY(lstick_y * 7000);
+                        
+            if(rstick_x != 0 || rstick_y != 0)
+            {
+                quad_omni_class->setVelocityX(rstick_x * 2000);
+                quad_omni_class->setVelocityY(rstick_y * 2000);
+            }
 
             if (DPAD_N) {
-                quad_omni_class->setVelocityY(500000);
+                quad_omni_class->setVelocityY(300000);
             }
             else if (DPAD_S) {
-                quad_omni_class->setVelocityY(-500000);
+                quad_omni_class->setVelocityY(-300000);
             }
             else if (DPAD_E) {
-                quad_omni_class->setVelocityX(500000);
+                quad_omni_class->setVelocityX(300000);
             }
             else if (DPAD_W) {
-                quad_omni_class->setVelocityX(-600000);
-            }
-            
-
-            //if(rstick_x == 0 && rstick_y == 0)
-            //{
-            //quad_omni_class->setVelocityX(rstick_x * 1500);
-            //quad_omni_class->setVelocityY(rstick_y * 1500);
-            //}
-            
-            if (l1) {
-                quad_omni_class->setMovementOption(1);
-            } 
-            else if (r1) {
-                quad_omni_class->setMovementOption(2);
-            } 
-            else if (l2) {
-                quad_omni_class->setMovementOption(3);
-            } 
-            else if (r2) {
-                quad_omni_class->setMovementOption(4);
-            } 
-            else {
-                quad_omni_class->setMovementOption(0);
+                quad_omni_class->setVelocityX(-300000);
             }
         }
         else if(autoMode==1){
-            if(distance1 == 0 || ((distance1 - changing_range_y) <= DT35_class->getBusVoltage(1, 1) && (distance1 + changing_range_y) >= DT35_class->getBusVoltage(1, 1))){
-                distance1 = DT35_class->getBusVoltage(1, 1);
-            }
-            else{
-                distance1 = DT35_class->getBusVoltage(1, 1) + fence_y;
-            }
-            if(distance2 == 0 || ((distance2 - changing_range_x1) <= DT35_class->getBusVoltage(1, 2) && (distance2 + changing_range_x1) >= DT35_class->getBusVoltage(1, 2))){
-                distance2 = DT35_class->getBusVoltage(2, 1);
-            }
-            else if((distance2 - changing_range_x2) <= DT35_class->getBusVoltage(1, 2) && (distance2 + changing_range_x2) >= DT35_class->getBusVoltage(1, 2)){
-                distance2 = DT35_class->getBusVoltage(2, 1) + pillar;
-            }
-            else{
-                distance2 = DT35_class->getBusVoltage(2, 1) + fence_x;
-            }
-            if(distance3 == 0 || ((distance3 - changing_range_x2) <= DT35_class->getBusVoltage(1, 3) && (distance3 + changing_range_x2) >= DT35_class->getBusVoltage(1, 3))){
-                distance3 = DT35_class->getBusVoltage(3, 1);
-            }
-            else if((distance3 - changing_range_x2) <= DT35_class->getBusVoltage(1, 2) && (distance3 + changing_range_x2) >= DT35_class->getBusVoltage(1, 2)){
-                distance3 = DT35_class->getBusVoltage(3, 1) + pillar;
-            }
-            else{
-                distance3 = DT35_class->getBusVoltage(3, 1) + fence_x;
-            }
-
-            printf("CH1:%dV   ", DT35_class->getBusVoltage(1, 1));
-            printf("CH2:%dV   ", DT35_class->getBusVoltage(2, 1));
-            printf("CH3:%dV   ", DT35_class->getBusVoltage(3, 1));
-
-            if(DT35_class->getBusVoltage(1, 3) < DT35_class->getBusVoltage(1, 2)){
+            /*          
+            if(distance3 > distance2){
                 quad_omni_class->setMovementOption(6);
             }
-            else if(DT35_class->getBusVoltage(1, 3) < DT35_class->getBusVoltage(1, 2)){
+            else if(distance3 < distance2){
                 quad_omni_class->setMovementOption(5);
             }
             else {
                 quad_omni_class->setMovementOption(0);
             }
+            */
 
             if(auto_stage == 1){
-                quad_omni_class->setVelocityX((pass_point_center_x - distance2) * 230);
-                quad_omni_class->setVelocityY((pass_point1_center_y - distance1) * 230);
-                if((distance2 >= pass_point_center_x)&&(distance1 <= pass_point1_center_y)){
-                    setAutoMode();
+                if(distance1 < pass_point1_center_y){
+                    quad_omni_class->setVelocityX(0 * automote_scale);
+                    quad_omni_class->setVelocityY(128 * automote_scale);
+                }
+                else if(distance1 >= pass_point1_center_y){
+                    if(distance2 < pass_point_center_x){
+                        quad_omni_class->setVelocityX(-128 * automote_scale);
+                        quad_omni_class->setVelocityY(0 * automote_scale);
+                    }    
+                }
+                if((distance2 >= pass_point_center_x)&&(distance1 >= pass_point1_center_y)){
+                    quad_omni_class->setVelocityX(0);
+                    quad_omni_class->setVelocityY(0);
+                    autoMode = 0;
+                    quad_omni_class->setTheta(theator+PI);
                 }
             }
             else if(auto_stage == 2){
-                if((distance1 <= key_point_y)||(distance2 <= key_point_x)){
-                    quad_omni_class->setVelocityX((key_point_x - distance2) * 230);
-                    quad_omni_class->setVelocityY((key_point_y - distance1) * 230);
+                if(distance1 > key_point_y){
+                    quad_omni_class->setVelocityX(0 * automote_scale);
+                    quad_omni_class->setVelocityY(-128 * automote_scale);
                 }
-                else{
-                    quad_omni_class->setVelocityX((try_spot_center_x - distance2) * 230);
-                    quad_omni_class->setVelocityY((try_spot1_center_y - distance1) * 230);
-                    if((distance2 >= try_spot_center_x)&&(distance1 <= try_spot1_center_y)){
-                        setAutoMode();
+                else if(distance1 <= key_point_y){
+                    if(distance2 < key_point_x){
+                        quad_omni_class->setVelocityX(-128 * automote_scale);
+                        quad_omni_class->setVelocityY(0 * automote_scale);
+                    }    
+                }
+                if((distance2 >= key_point_x)&&(distance1 <= key_point_y)){
+                    if(distance1 < try_spot1_center_y){
+                        quad_omni_class->setVelocityX(0 * automote_scale);
+                        quad_omni_class->setVelocityY(128 * automote_scale);
+                    }
+                    else if(distance1 >= try_spot1_center_y){
+                        if(distance2 < try_spot_center_x){
+                            quad_omni_class->setVelocityX(-128 * automote_scale);
+                            quad_omni_class->setVelocityY(0 * automote_scale);
+                        }    
+                    }
+                    if((distance2 >= try_spot_center_x)&&(distance1 >= try_spot1_center_y)){
+                        quad_omni_class->setVelocityX(0);
+                        quad_omni_class->setVelocityY(0);
+                        servo_auto();
+                        autoMode = 0;
+                        quad_omni_class->setTheta(theator+PI);
                     }
                 }
             }
             else if(auto_stage == 3){
-                if((distance1 <= key_point_y)||(distance2 >= key_point_x)){
-                    quad_omni_class->setVelocityX((key_point_x - distance2) * 230);
-                    quad_omni_class->setVelocityY((key_point_y - distance1) * 230);
+                if(distance2 > key_point_x){
+                    quad_omni_class->setVelocityX(128 * automote_scale);
+                    quad_omni_class->setVelocityY(0 * automote_scale);
                 }
-                else{
-                    quad_omni_class->setVelocityX((pass_point_center_x - distance2) * 230);
-                    quad_omni_class->setVelocityY((pass_point2_center_y - distance1) * 230);
-                    if((distance2 <= pass_point_center_x)&&(distance1 <= pass_point2_center_y)){
-                        setAutoMode();
+                else if(distance2 <= key_point_x){
+                    if(distance1 > key_point_y){
+                        quad_omni_class->setVelocityX(0 * automote_scale);
+                        quad_omni_class->setVelocityY(-128 * automote_scale);
+                    }    
+                }
+                if((distance2 <= key_point_x)&&(distance1 <= key_point_y)){
+                    if(distance2 > pass_point_center_x){
+                        quad_omni_class->setVelocityX(128 * automote_scale);
+                        quad_omni_class->setVelocityY(0 * automote_scale);
+                    }
+                    else if(distance2 <= pass_point_center_x){
+                        if(distance1 < pass_point2_center_y){
+                            quad_omni_class->setVelocityX(0 * automote_scale);
+                            quad_omni_class->setVelocityY(128 * automote_scale);
+                        }    
+                    }
+                    if((distance2 <= pass_point_center_x)&&(distance1 >= pass_point2_center_y)){
+                        quad_omni_class->setVelocityX(0);
+                        quad_omni_class->setVelocityY(0);
+                        autoMode = 0;
+                        quad_omni_class->setTheta(theator+PI);
                     }
                 }
             }
             else if(auto_stage == 4){
-                if((distance1 <= key_point_y)||(distance2 <= key_point_x)){
-                    quad_omni_class->setVelocityX((key_point_x - distance2) * 230);
-                    quad_omni_class->setVelocityY((key_point_y - distance1) * 230);
+                if(distance1 > key_point_y){
+                    quad_omni_class->setVelocityX(0 * automote_scale);
+                    quad_omni_class->setVelocityY(-128 * automote_scale);
                 }
-                else{
-                    quad_omni_class->setVelocityX((try_spot_center_x - distance2) * 230);
-                    quad_omni_class->setVelocityY((try_spot2_center_y - distance1) * 230);
-                    if((distance2 >= try_spot_center_x)&&(distance1 >= try_spot2_center_y)){
-                        setAutoMode();
+                else if(distance1 <= key_point_y){
+                    if(distance2 < key_point_x){
+                        quad_omni_class->setVelocityX(-128 * automote_scale);
+                        quad_omni_class->setVelocityY(0 * automote_scale);
+                    }    
+                }
+                if((distance2 >= key_point_x)&&(distance1 <= key_point_y)){
+                    if(distance1 > try_spot2_center_y){
+                        quad_omni_class->setVelocityX(0 * automote_scale);
+                        quad_omni_class->setVelocityY(-128 * automote_scale);
+                    }
+                    else if(distance1 <= try_spot2_center_y){
+                        if(distance2 < try_spot_center_x){
+                            quad_omni_class->setVelocityX(-128 * automote_scale);
+                            quad_omni_class->setVelocityY(0 * automote_scale);
+                        }    
+                    }
+                    if((distance2 >= try_spot_center_x)&&(distance1 <= try_spot2_center_y)){
+                        quad_omni_class->setVelocityX(0);
+                        quad_omni_class->setVelocityY(0);
+                        servo_auto();
+                        autoMode = 0;
+                        quad_omni_class->setTheta(theator+PI);
                     }
                 }
             }
             else if(auto_stage == 5){
-                if((distance1 <= key_point_y)||(distance2 >= key_point_x)){
-                    quad_omni_class->setVelocityX((key_point_x - distance2) * 230);
-                    quad_omni_class->setVelocityY((key_point_y - distance1) * 230);
+                if(distance2 > key_point_x){
+                    quad_omni_class->setVelocityX(128 * automote_scale);
+                    quad_omni_class->setVelocityY(0 * automote_scale);
                 }
-                else{
-                    quad_omni_class->setVelocityX((pass_point_center_x - distance2) * 230);
-                    quad_omni_class->setVelocityY((pass_point3_center_y - distance1) * 230);
-                    if((distance2 <= pass_point_center_x)&&(distance1 <= pass_point3_center_y)){
-                        setAutoMode();
+                else if(distance2 <= key_point_x){
+                    if(distance1 < key_point_y){
+                        quad_omni_class->setVelocityX(0 * automote_scale);
+                        quad_omni_class->setVelocityY(128 * automote_scale);
+                    }    
+                }
+                if((distance2 <= key_point_x)&&(distance1 >= key_point_y)){
+                    if(distance2 > pass_point_center_x){
+                        quad_omni_class->setVelocityX(128 * automote_scale);
+                        quad_omni_class->setVelocityY(0 * automote_scale);
+                    }
+                    else if(distance2 <= pass_point_center_x){
+                        if(distance1 < pass_point3_center_y){
+                            quad_omni_class->setVelocityX(0 * automote_scale);
+                            quad_omni_class->setVelocityY(128 * automote_scale);
+                        }    
+                    }
+                    if((distance2 <= pass_point_center_x)&&(distance1 >= pass_point3_center_y)){
+                        quad_omni_class->setVelocityX(0);
+                        quad_omni_class->setVelocityY(0);
+                        autoMode = 0;
+                        quad_omni_class->setTheta(theator+PI);
                     }
                 }
             }
             else if(auto_stage == 6){
-                quad_omni_class->setVelocityX((try_spot_center_x - distance2) * 230);
-                quad_omni_class->setVelocityY((try_spot3_center_y - distance1) * 230);
-                if((distance2 >= try_spot_center_x)&&(distance1 >= try_spot2_center_y)){
-                    setAutoMode();
+                if(distance1 > key_point_y){
+                    quad_omni_class->setVelocityX(0 * automote_scale);
+                    quad_omni_class->setVelocityY(-128 * automote_scale);
                 }
-            }
-            else if(auto_stage == 7){
-                quad_omni_class->setVelocityX((pass_point_center_x - distance2) * 230);
-                quad_omni_class->setVelocityY((pass_point4_center_y - distance1) * 230);
-                if((distance2 <= pass_point_center_x)&&(distance1 <= pass_point4_center_y)){
-                    setAutoMode();
+                else if(distance1 <= key_point_y){
+                    if(distance2 < key_point_x){
+                        quad_omni_class->setVelocityX(-128 * automote_scale);
+                        quad_omni_class->setVelocityY(0 * automote_scale);
+                    }    
                 }
-            }
-            else if(auto_stage == 8){
-                quad_omni_class->setVelocityX((try_spot_center_x - distance2) * 230);
-                quad_omni_class->setVelocityY((try_spot4_center_y - distance1) * 230);
-                if((distance2 >= try_spot_center_x)&&(distance1 >= try_spot4_center_y)){
-                    setAutoMode();
-                }
-            }
-            else if(auto_stage == 9){
-                quad_omni_class->setVelocityX((pass_point_center_x - distance2) * 230);
-                quad_omni_class->setVelocityY((pass_point5_center_y - distance1) * 230);
-                if((distance2 <= pass_point_center_x)&&(distance1 <= pass_point5_center_y)){
-                    setAutoMode();
-                }
-            }
-            else if(auto_stage == 10){
-                if((distance1 <= key_point_y)||(distance2 <= key_point_x)){
-                    quad_omni_class->setVelocityX((key_point_x - distance2) * 230);
-                    quad_omni_class->setVelocityY((key_point_y - distance1) * 230);
-                }
-                else{
-                    quad_omni_class->setVelocityX((try_spot_center_x - distance2) * 230);
-                    quad_omni_class->setVelocityY((try_spot5_center_y - distance1) * 230);
-                    if((distance2 >= try_spot_center_x)&&(distance1 >= try_spot2_center_y)){
-                        setAutoMode();
+                if((distance2 >= key_point_x)&&(distance1 <= key_point_y)){
+                    if(distance1 > try_spot3_center_y){
+                        quad_omni_class->setVelocityX(0 * automote_scale);
+                        quad_omni_class->setVelocityY(-128 * automote_scale);
+                    }
+                    else if(distance1 <= try_spot3_center_y){
+                        if(distance2 < try_spot_center_x){
+                            quad_omni_class->setVelocityX(-128 * automote_scale);
+                            quad_omni_class->setVelocityY(0 * automote_scale);
+                        }    
+                    }
+                    if((distance2 >= try_spot_center_x)&&(distance1 <= try_spot3_center_y)){
+                        quad_omni_class->setVelocityX(0);
+                        quad_omni_class->setVelocityY(0);
+                        servo_auto();
+                        autoMode = 0;
+                        quad_omni_class->setTheta(theator+PI);
                     }
                 }
             }
-            
-            ThisThread::sleep_for(100);
+            else if(auto_stage == 7){
+                if(distance2 > key_point_x){
+                    quad_omni_class->setVelocityX(128 * automote_scale);
+                    quad_omni_class->setVelocityY(0 * automote_scale);
+                }
+                else if(distance2 <= key_point_x){
+                    if(distance1 < key_point_y){
+                        quad_omni_class->setVelocityX(0 * automote_scale);
+                        quad_omni_class->setVelocityY(128 * automote_scale);
+                    }    
+                }
+                if((distance2 <= key_point_x)&&(distance1 >= key_point_y)){
+                    if(distance2 > pass_point_center_x){
+                        quad_omni_class->setVelocityX(128 * automote_scale);
+                        quad_omni_class->setVelocityY(0 * automote_scale);
+                    }
+                    else if(distance2 <= pass_point_center_x){
+                        if(distance1 < pass_point4_center_y){
+                            quad_omni_class->setVelocityX(0 * automote_scale);
+                            quad_omni_class->setVelocityY(128 * automote_scale);
+                        }    
+                    }
+                    if((distance2 <= pass_point_center_x)&&(distance1 >= pass_point4_center_y)){
+                        quad_omni_class->setVelocityX(0);
+                        quad_omni_class->setVelocityY(0);
+                        autoMode = 0;
+                        quad_omni_class->setTheta(theator+PI);
+                    }
+                }
+            }
+            else if(auto_stage == 8){
+                if(distance1 > key_point_y){
+                    quad_omni_class->setVelocityX(0 * automote_scale);
+                    quad_omni_class->setVelocityY(-128 * automote_scale);
+                }
+                else if(distance1 <= key_point_y){
+                    if(distance2 < key_point_x){
+                        quad_omni_class->setVelocityX(-128 * automote_scale);
+                        quad_omni_class->setVelocityY(0 * automote_scale);
+                    }    
+                }
+                if((distance2 >= key_point_x)&&(distance1 <= key_point_y)){
+                    if(distance1 > try_spot4_center_y){
+                        quad_omni_class->setVelocityX(0 * automote_scale);
+                        quad_omni_class->setVelocityY(-128 * automote_scale);
+                    }
+                    else if(distance1 <= try_spot4_center_y){
+                        if(distance2 < try_spot_center_x){
+                            quad_omni_class->setVelocityX(-128 * automote_scale);
+                            quad_omni_class->setVelocityY(0 * automote_scale);
+                        }    
+                    }
+                    if((distance2 >= try_spot_center_x)&&(distance1 <= try_spot4_center_y)){
+                        quad_omni_class->setVelocityX(0);
+                        quad_omni_class->setVelocityY(0);
+                        servo_auto();
+                        autoMode = 0;
+                        quad_omni_class->setTheta(theator+PI);
+                    }
+                }
+            }
+            else if(auto_stage == 9){
+                if(distance2 > key_point_x){
+                    quad_omni_class->setVelocityX(128 * automote_scale);
+                    quad_omni_class->setVelocityY(0 * automote_scale);
+                }
+                else if(distance2 <= key_point_x){
+                    if(distance1 < key_point_y){
+                        quad_omni_class->setVelocityX(0 * automote_scale);
+                        quad_omni_class->setVelocityY(128 * automote_scale);
+                    }    
+                }
+                if((distance2 <= key_point_x)&&(distance1 >= key_point_y)){
+                    if(distance2 > pass_point_center_x){
+                        quad_omni_class->setVelocityX(128 * automote_scale);
+                        quad_omni_class->setVelocityY(0 * automote_scale);
+                    }
+                    else if(distance2 <= pass_point_center_x){
+                        if(distance1 < pass_point5_center_y){
+                            quad_omni_class->setVelocityX(0 * automote_scale);
+                            quad_omni_class->setVelocityY(128 * automote_scale);
+                        }    
+                    }
+                    if((distance2 <= pass_point_center_x)&&(distance1 >= pass_point5_center_y)){
+                        quad_omni_class->setVelocityX(0);
+                        quad_omni_class->setVelocityY(0);
+                        autoMode = 0;
+                        quad_omni_class->setTheta(theator+PI);
+                    }
+                }
+            }
+            else if(auto_stage == 10){
+               if(distance1 > key_point_y){
+                    quad_omni_class->setVelocityX(0 * automote_scale);
+                    quad_omni_class->setVelocityY(-128 * automote_scale);
+                }
+                else if(distance1 <= key_point_y){
+                    if(distance2 < key_point_x){
+                        quad_omni_class->setVelocityX(-128 * automote_scale);
+                        quad_omni_class->setVelocityY(0 * automote_scale);
+                    }    
+                }
+                if((distance2 >= key_point_x)&&(distance1 <= key_point_y)){
+                    if(distance1 > try_spot5_center_y){
+                        quad_omni_class->setVelocityX(0 * automote_scale);
+                        quad_omni_class->setVelocityY(-128 * automote_scale);
+                    }
+                    else if(distance1 <= try_spot5_center_y){
+                        if(distance2 < try_spot_center_x){
+                            quad_omni_class->setVelocityX(-128 * automote_scale);
+                            quad_omni_class->setVelocityY(0 * automote_scale);
+                        }    
+                    }
+                    if((distance2 >= try_spot_center_x)&&(distance1 <= try_spot5_center_y)){
+                        quad_omni_class->setVelocityX(0);
+                        quad_omni_class->setVelocityY(0);
+                        servo_auto();
+                        autoMode = 0;
+                        quad_omni_class->setTheta(theator+PI);
+                    }
+                }
+            }
+            //ThisThread::sleep_for(100);
         }
         //pc.printf("%d %d %d %d \r\n",quad_omni_class->getMotor1Speed(),quad_omni_class->getMotor2Speed(),quad_omni_class->getMotor3Speed(),quad_omni_class->getMotor4Speed() );
         quad_omni_class->motorUpdate();
         //pc.printf("--------------------------------------------\r\n");
-        ThisThread::sleep_for(100);
+        ThisThread::sleep_for(20);
     }
 }
 
 void DT35_initialazation(){
     //setup
-    DT35_class->DT35_initialization(3);
+    DT35_class->DT35_initialization(1, 3);
     printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(1),DT35_class->getDieID(1),DT35_class->getConfiguration(1));
+    //printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(2),DT35_class->getDieID(2),DT35_class->getConfiguration(2));
+    //printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(3),DT35_class->getDieID(3),DT35_class->getConfiguration(3));
 }
 
 int main() {
@@ -448,14 +702,10 @@ int main() {
     pc.printf("--------------------------------------------\r\n");
     DT35_initialazation();
     quad_omni_thread.start(callback(quad_omni_task));
+    DS4_thread.start(callback(xpad_task));
     servo_1.period_us (2500);
     servo_1.pulsewidth_us(500);
-    DS4_thread.start(callback(xpad_task));
-
     while (1) {
-       // printf("CH1:%dV   ", DT35_class->getBusVoltage(1, 1));
-      //  printf("CH2:%dV   ", DT35_class->getBusVoltage(2, 1));
-      //  printf("CH3:%dV \n", DT35_class->getBusVoltage(3, 1));
     }
     return 0;
 }
