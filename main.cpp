@@ -38,7 +38,6 @@ volatile int buttons_l;
 volatile float PI = 3.14159265358979323846;
 volatile float theator = -PI/2;
 volatile int autoMode = 0;
-volatile int firstLoop = 0;
 volatile int auto_stage = 0;
 volatile int fence_x = 4340;
 //volatile int fence_y = 7000;
@@ -66,17 +65,17 @@ volatile int changing_range_y1 = 5430; // acceptable changing range of motor mov
 volatile int changing_range_y2 = 4010; // acceptable changing range of motor movement in mm/ms (y pillar 2)
 volatile int changing_range_x1 = 2550; // acceptable changing range of motor movement in mm/ms (x pillar)
 volatile int changing_range_x2 = 4100; // acceptable changing range of motor movement in mm/ms (x fence)
-volatile int automote_scale = 100; //scale up the motors' speed
+volatile int automote_scale = 1000; //scale up the motors' speed
 
 quad_omni *quad_omni_class = new quad_omni(1, 2, 3, 4, can1);
-DT35 *DT35_class = new DT35(PB_4, PA_8, (0x82), (0x84), (0x86));        //VS:0x82; SCL:0x86; SDA:0x84; GND:0x80
+DT35 *DT35_class = new DT35(PB_4, PA_8, (0x80));        //VS:0x82; SCL:0x86; SDA:0x84; GND:0x80
 
 void setAutoMode(){
     if(autoMode == 1){
         autoMode = 0;
         quad_omni_class->setTheta(theator+PI);
     }
-    else if(autoMode == 0){
+    if(autoMode == 0){
         autoMode = 1;
         quad_omni_class->setTheta(theator+3*PI/2);
     }
@@ -149,8 +148,19 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
     r2_trig = trigger_r;
     relay_1 = circle;
     if (square) {
-        setAutoMode();
-        ThisThread::sleep_for(500);
+        if((auto_stage % 2) == 0){
+            auto_stage++;
+            setAutoMode();
+        }
+    }
+    if(options){
+        if((auto_stage % 2) == 1){
+            auto_stage++;
+            setAutoMode();
+        }
+    }
+    if(share){
+        autoMode = 0;
     }
     servo_curr_pw = constrain(cross * servo_backward_speed - triangle * servo_forward_speed + servo_curr_pw, servo_min, servo_max);
     //pc.printf("%d\n\rservo\r\n",servo_curr_pw);
@@ -294,50 +304,49 @@ void quad_omni_task() {
             distance1 = (DT35_class->getBusVoltage(1, 1));
         }
         if(distance2 >= fence_x){
-            if((distance2 - changing_range_x2) >= DT35_class->getBusVoltage(2, 1)){
-                distance2 = (DT35_class->getBusVoltage(2, 1) + fence_x);
+            if((distance2 - changing_range_x2) >= DT35_class->getBusVoltage(1, 2)){
+                distance2 = (DT35_class->getBusVoltage(1, 2) + fence_x);
             }
             else{
-                distance2 = DT35_class->getBusVoltage(2, 1);
+                distance2 = DT35_class->getBusVoltage(1, 2);
             }
         }
         else if(distance2 >= pillar_x){
-            if((distance2 - changing_range_x1) >= DT35_class->getBusVoltage(2, 1)){
-                distance2 = (DT35_class->getBusVoltage(2, 1) + pillar_x);
+            if((distance2 - changing_range_x1) >= DT35_class->getBusVoltage(1, 2)){
+                distance2 = (DT35_class->getBusVoltage(1, 2) + pillar_x);
             }
             else{
-                distance2 = DT35_class->getBusVoltage(2, 1);
+                distance2 = DT35_class->getBusVoltage(1, 2);
             }
         }
         else{
-            distance2 = (DT35_class->getBusVoltage(2, 1));
+            distance2 = (DT35_class->getBusVoltage(1, 2));
         }
         if(distance3 >= fence_x){
-            if((distance3 - changing_range_x2) >= DT35_class->getBusVoltage(3, 1)){
-                distance3 = (DT35_class->getBusVoltage(3, 1) + fence_x);
+            if((distance3 - changing_range_x2) >= DT35_class->getBusVoltage(1, 3)){
+                distance3 = (DT35_class->getBusVoltage(1, 3) + fence_x);
             }
             else{
-                distance3 = DT35_class->getBusVoltage(3, 1);
+                distance3 = DT35_class->getBusVoltage(1, 3);
             }
         }
         else if(distance3 >= pillar_x){
-            if((distance3 - changing_range_x1) >= DT35_class->getBusVoltage(3, 1)){
-                distance3 = (DT35_class->getBusVoltage(3, 1) + pillar_x);
+            if((distance3 - changing_range_x1) >= DT35_class->getBusVoltage(1, 3)){
+                distance3 = (DT35_class->getBusVoltage(1, 3) + pillar_x);
             }
             else{
-                distance3 = DT35_class->getBusVoltage(3, 1);
+                distance3 = DT35_class->getBusVoltage(1, 3);
             }
         }
         else{
-            distance3 = (DT35_class->getBusVoltage(3, 1));
+            distance3 = (DT35_class->getBusVoltage(1, 3));
         }
-        printf("auto:%d   ", auto_stage);
-        printf("mode:%d   ", autoMode);
-        printf("CH1:%dV   ", distance1);
-        printf("CH2:%dV   ", distance2);
-        printf("CH3:%dV   \r\n", distance3);
+        pc.printf("auto:%d   ", auto_stage);
+        pc.printf("mode:%d   ", autoMode);
+        pc.printf("CH1:%dV   ", distance1);
+        pc.printf("CH2:%dV   ", distance2);
+        pc.printf("CH3:%dV   \r\n", distance3);
         if(autoMode==0){
-            firstLoop = 1;
             // show what buttons are pressed every 0.5s
             //showbuttons();
             // This sleep_for can be removed
@@ -366,10 +375,6 @@ void quad_omni_task() {
             }
         }
         else if(autoMode==1){
-            if(firstLoop == 1){
-                firstLoop = 0;
-                auto_stage++;
-            }
             /*          
             if(distance3 > distance2){
                 quad_omni_class->setMovementOption(6);
@@ -686,12 +691,10 @@ void quad_omni_task() {
 
 void DT35_initialazation(){
     //setup
-    DT35_class->DT35_initialization(1, 1);
-    DT35_class->DT35_initialization(2, 1);
-    DT35_class->DT35_initialization(3, 1);
+    DT35_class->DT35_initialization(1, 3);
     printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(1),DT35_class->getDieID(1),DT35_class->getConfiguration(1));
-    printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(2),DT35_class->getDieID(2),DT35_class->getConfiguration(2));
-    printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(3),DT35_class->getDieID(3),DT35_class->getConfiguration(3));
+    //printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(2),DT35_class->getDieID(2),DT35_class->getConfiguration(2));
+    //printf("INA3221:   FID:%d   UID:%d    Mode:%d\r\n",DT35_class->getManufacturerID(3),DT35_class->getDieID(3),DT35_class->getConfiguration(3));
 }
 
 int main() {
@@ -702,7 +705,6 @@ int main() {
     DS4_thread.start(callback(xpad_task));
     servo_1.period_us (2500);
     servo_1.pulsewidth_us(500);
-
     while (1) {
     }
     return 0;
