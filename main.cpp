@@ -325,7 +325,7 @@ if (DS4BT_packet[8]& (1 << 0)) {
 void DS4BT_task() {
 
   while (1) {
-    if (!device.readable())
+    while (!device.readable())
       ;
     if (device.getc() == 'D') {
       while (!device.readable())
@@ -337,7 +337,8 @@ void DS4BT_task() {
         if (device.getc() == '4') {
                 ready=1;
           for (int i = 0; i < 15; i++) {
-            while (!device.readable());
+            while (!device.readable())
+            ;
               DS4BT_packet[i] = device.getc();
             
           }
@@ -346,8 +347,11 @@ void DS4BT_task() {
 
 
         }
+        else{ready=0;}
       }
+      else{ready=0;}
     }
+    else{ready=0;}
      if(ready){
  Parse_DS4_BT();
  }
