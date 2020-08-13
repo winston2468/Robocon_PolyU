@@ -3,7 +3,7 @@
 #include "quad_omni/quad_omni.h"
 #include "./INA3221/INA3221.h"
 #include "./DT35/DT35.h"
-#include "BufferedSerial.h"
+#include "DS4_BT_Serial_Host_Shield.h"
 #define RECEIVING 1;
 #define TRY1 2;
 #define TRY2 4;
@@ -25,10 +25,11 @@ CAN* can1 = new CAN(PB_5, PB_6, 500000);
 Thread DS4_thread;
 Thread quad_omni_thread;
 PwmOut servo_1(PA_5);
- int servo_curr_pw = 1500;
- int servo_max = 1500;
- int servo_min = 1220;
- int servo_backward_speed = 5;
+int servo_old_pwm = 1440;
+ int servo_curr_pw = 1440;
+ int servo_max = 1970;
+ int servo_min = 1300;
+ int servo_backward_speed = 3;
  int servo_forward_speed = 3;
 DigitalOut relay_1(PB_9,0);
 volatile bool triangle, circle, cross, square;
@@ -96,6 +97,117 @@ void servo_auto(){
         servo_1.pulsewidth_us(servo_curr_pw); 
     }
 }
+void DS4BT_task() {
+int DS4_Options_Old_State = 0;
+int DS4_Triangle_Old_State =0;
+
+int Relay_State =0;
+int DS4_Square_Old_State =0;
+int DS4_Circle_Old_State =0;
+BufferedSerial *DS4BT_BS = new BufferedSerial(PA_9, PA_10);
+DS4BT_BS->baud(115200);
+DS4_BT_Serial_Host_Shield DS4_BT_1(DS4BT_BS);
+while (1) {
+DS4_BT_1.getPacket();
+    square = DS4_BT_1.DS4_Input.Square;
+    triangle = DS4_BT_1.DS4_Input.Triangle;
+    cross = DS4_BT_1.DS4_Input.Cross;
+    circle = DS4_BT_1.DS4_Input.Circle;
+    DPAD_N = DS4_BT_1.DS4_Input.DPAD_N;
+    DPAD_NW = DS4_BT_1.DS4_Input.DPAD_NW;
+    DPAD_W = DS4_BT_1.DS4_Input.DPAD_W;
+    DPAD_SW = DS4_BT_1.DS4_Input.DPAD_SW;
+    DPAD_S = DS4_BT_1.DS4_Input.DPAD_S;
+    DPAD_SE = DS4_BT_1.DS4_Input.DPAD_SE;
+    DPAD_E = DS4_BT_1.DS4_Input.DPAD_E;
+    l1 = DS4_BT_1.DS4_Input.L1;
+    r1 = DS4_BT_1.DS4_Input.R1;
+    l2 =DS4_BT_1.DS4_Input.L2;
+    r2 =DS4_BT_1.DS4_Input.R2;
+    l2_trig =DS4_BT_1.DS4_Input.L2_Trigger;
+    r2_trig =DS4_BT_1.DS4_Input.R2_Trigger;
+    lstick_x =DS4_BT_1.DS4_Input.Lstick_x;
+    lstick_y =DS4_BT_1.DS4_Input.Lstick_y;
+    rstick_x =DS4_BT_1.DS4_Input.Rstick_x;
+    rstick_y =DS4_BT_1.DS4_Input.Rstick_y;
+
+
+
+
+        if(DS4_BT_1.DS4_Input.Options && (!DS4_Options_Old_State)){
+            DS4_Options_Old_State = 1;
+        if((auto_stage % 2) == 1){
+            auto_stage++;
+            setAutoMode();
+        }
+            }
+            
+            
+        
+        else if ((!DS4_BT_1.DS4_Input.Options)&& DS4_Options_Old_State){
+            DS4_Options_Old_State = 0;
+        }
+
+
+        if(DS4_BT_1.DS4_Input.Circle && (!DS4_Circle_Old_State)){
+            DS4_Circle_Old_State = 1;
+
+             if(Relay_State){
+relay_1 =0;
+Relay_State = 0;
+             }
+          else {
+
+              relay_1 =1;
+              Relay_State = 1;
+          }
+            
+            
+            
+        }
+        else if ((!DS4_BT_1.DS4_Input.Circle)&& DS4_Circle_Old_State){
+            DS4_Circle_Old_State = 0;
+        }
+
+
+
+
+        if(DS4_BT_1.DS4_Input.Square && (!DS4_Square_Old_State)){
+            DS4_Square_Old_State = 1;
+    
+          if((auto_stage % 2) == 0){
+            auto_stage++;
+            setAutoMode();
+          }
+      
+            
+        }
+        else if ((!DS4_BT_1.DS4_Input.Square)&& DS4_Square_Old_State){
+            DS4_Square_Old_State = 0;
+        }
+
+
+   
+
+
+    if(share){
+        autoMode = 0;
+    }
+    
+    servo_curr_pw = constrain(cross * 10 - triangle * 10 + servo_curr_pw, 1300, 1970);
+    
+    if (servo_curr_pw != servo_old_pwm){
+        pc.printf("%d\r\n",servo_curr_pw);
+    servo_1.pulsewidth_us(servo_curr_pw); 
+    servo_old_pwm = servo_curr_pw;
+    } 
+
+
+}
+
+
+}
+
 
 void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
               int stick_rx, int stick_ry, int trigger_l, int trigger_r) {
@@ -167,199 +279,14 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
     if(share){
         autoMode = 0;
     }
-    servo_curr_pw = constrain(cross * servo_backward_speed - triangle * servo_forward_speed + servo_curr_pw, servo_min, servo_max);
+    servo_curr_pw = constrain(cross * 10 - triangle * 10 + servo_curr_pw, 1200, 2350);
     //pc.printf("%d\n\rservo\r\n",servo_curr_pw);
     servo_1.pulsewidth_us(servo_curr_pw);  
 
 }
 
-void Parse_DS4_BT() {
-/*
-    if (DS4BT_packet[6]& (1 << 0)) {
-    pc.printf("Triangle\r\n");
-  }
-  if (DS4BT_packet[6]& (1 << 1)) {
-    pc.printf("Circle\r\n");
-  }
-  if (DS4BT_packet[6]& (1 << 2)) {
-    pc.printf("Cross\r\n");
-  }
-  if (DS4BT_packet[6]& (1 << 3)) {
-    pc.printf("Square\r\n");
-  }
-  if (DS4BT_packet[6]& (1 << 4)) {
-    pc.printf("Up\r\n");
-  }
-  if (DS4BT_packet[6]& (1 << 5)) {
-    pc.printf("Right\r\n");
-  }
-  if (DS4BT_packet[6]& (1 << 6)) {
-    pc.printf("Down\r\n");
-  }
-  if (DS4BT_packet[6]& (1 << 7)) {
-    pc.printf("Left\r\n");
-  }
-  if (DS4BT_packet[7]& (1 << 0)) {
-    pc.printf("L1\r\n");
-  }
-  if (DS4BT_packet[7]& (1 << 1)) {
-    pc.printf("L3\r\n");
-  }
-  if (DS4BT_packet[7]& (1 << 2)) {
-    pc.printf("R1\r\n");
-  }
-  if (DS4BT_packet[7]& (1 << 3)) {
-    pc.printf("R3\r\n");
-  }
-  if (DS4BT_packet[7]& (1 << 4)) {
-    pc.printf("Share\r\n");
-  }
-  if (DS4BT_packet[7]& (1 << 5)) {
-    pc.printf("Options\r\n");
-  }
-  if (DS4BT_packet[7]& (1 << 6)) {
-    pc.printf("Touchpad\r\n");
-  }
-  if (DS4BT_packet[7]& (1 << 7)) {
-    pc.printf("PS\r\n");
-  }
 
 
-
-    pc.printf("L2 %d\r\n", DS4BT_packet[4]);
-
-    pc.printf("R2 %d\r\n", DS4BT_packet[5]);
-  
-  pc.printf("lstick_x %d\r\n", DS4BT_packet[0]);
-  pc.printf("lstick_y %d\r\n", DS4BT_packet[1]);
-  pc.printf("rstick_x %d\r\n", DS4BT_packet[2]);
-  pc.printf("rstick_y %d\r\n", DS4BT_packet[3]);
-
-if (DS4BT_packet[8]& (1 << 0)) {
-    pc.printf("Touch 0\r\n");
-  }
-  if (DS4BT_packet[8]& (1 << 1)) {
-    pc.printf("Touch 1\r\n");
-  }
-  pc.printf("Angle Pitch %d\r\n", DS4BT_packet[9]);
-  pc.printf("Angle Roll %d\r\n", DS4BT_packet[10]);
-  pc.printf("Touch 0X %d\r\n", DS4BT_packet[11]);
-  pc.printf("Touch 0Y %d\r\n", DS4BT_packet[12]);
-  pc.printf("Touch 1X %d\r\n", DS4BT_packet[13]);
-  pc.printf("Touch 1Y %d\r\n", DS4BT_packet[14]);
-  
-
-  pc.printf("--------------------------------------------\r\n");
-*/
-  triangle = DS4BT_packet[6]& (1 << 0);
-  circle =DS4BT_packet[6]& (1 << 1);
-  cross = DS4BT_packet[6]& (1 << 2);
-  square = DS4BT_packet[6]& (1 << 3);
-
-  DPAD_NW = DS4BT_packet[6]& (1 << 5) &&DS4BT_packet[6]& (1 << 4);
-  DPAD_W = DS4BT_packet[6]& (1 << 5);
-  DPAD_SW = (DS4BT_packet[6]& (1 << 5) && DS4BT_packet[6]& (1 << 6));
-  DPAD_S = DS4BT_packet[6]& (1 << 6);
-  DPAD_SE = (DS4BT_packet[6]& (1 << 6) && DS4BT_packet[6]& (1 << 7));
-  DPAD_E = DS4BT_packet[6]& (1 << 7);
-  DPAD_NE = (DS4BT_packet[6]& (1 << 7) && DS4BT_packet[6]& (1 << 4));
-  DPAD_N = DS4BT_packet[6]& (1 << 4);
-  r3 = DS4BT_packet[7]& (1 << 3);
-  l3 = DS4BT_packet[7]& (1 << 1);
-  options = DS4BT_packet[7]& (1 << 5);
-  share = DS4BT_packet[7]& (1 << 4);
-  touchpad = DS4BT_packet[7]& (1 << 6);
-  PS = DS4BT_packet[7]& (1 << 7);
-  r1 = DS4BT_packet[7]& (1 << 2);
-  l1 = DS4BT_packet[7]& (1 << 0);
-
-
-  //Deadzone
-  if (!(DS4BT_packet[0] > 118 && DS4BT_packet[0] < 136)) {
-    lstick_x = DS4BT_packet[0] - 127;
-  } else {
-    lstick_x = 0;
-  }
-  if (!(DS4BT_packet[1] > 118 && DS4BT_packet[1] < 136)) {
-    lstick_y = -1*(DS4BT_packet[1] - 127);
-  } else {
-    lstick_y = 0;
-  }
-  if (!(DS4BT_packet[2] > 118 && DS4BT_packet[2] < 136)) {
-    rstick_x = DS4BT_packet[2] - 127;
-  } else {
-    rstick_x = 0;
-  }
-  if (!(DS4BT_packet[3] > 118 && DS4BT_packet[3] < 136)) {
-    rstick_y =  -1*(DS4BT_packet[3] - 127);
-  } else {
-    rstick_y = 0;
-  }
-    
-  l2_trig = DS4BT_packet[4];
-  r2_trig = DS4BT_packet[5];
-    l2_trig >=0 ? l2=l2_trig  : l2=0;
-    r2_trig >=0 ? r2=r2_trig  : r2=0;
-    relay_1 = circle;
-    if (square) {
-        if((auto_stage % 2) == 0){
-            auto_stage++;
-            setAutoMode();
-        }
-    }
-    if(options){
-        if((auto_stage % 2) == 1){
-            auto_stage++;
-            setAutoMode();
-        }
-    }
-    if(share){
-        autoMode = 0;
-    }
-    servo_curr_pw = constrain(cross * servo_backward_speed - triangle * servo_forward_speed + servo_curr_pw, servo_min, servo_max);
-    //pc.printf("%d\n\rservo\r\n",servo_curr_pw);
-    servo_1.pulsewidth_us(servo_curr_pw);  
-
-}
-
-void DS4BT_task() {
-
-  while (1) {
-    while (!device.readable())
-      ;
-    if (device.getc() == 'D') {
-      while (!device.readable())
-        ;
-      if (device.getc() == 'S') {
-
-        while (!device.readable())
-          ;
-        if (device.getc() == '4') {
-                ready=1;
-          for (int i = 0; i < 15; i++) {
-            while (!device.readable())
-            ;
-              DS4BT_packet[i] = device.getc();
-            
-          }
-
-
-
-
-        }
-        else{ready=0;}
-      }
-      else{ready=0;}
-    }
-    else{ready=0;}
-     if(ready){
- Parse_DS4_BT();
- }
-   // ThisThread::sleep_for(15);
- }
-
- 
-}
 /* 
 // functions:if button pressed is true -> print
 
@@ -904,8 +831,9 @@ pc.baud(115200);
     quad_omni_thread.start(callback(quad_omni_task));
     //DS4_thread.start(callback(xpad_task));
     servo_1.period_us (2500);
-    servo_1.pulsewidth_us(500);
-     DS4BT_thread.start(callback(DS4BT_task));
+    servo_1.pulsewidth_us(1440);
+    
+      DS4BT_thread.start(callback(DS4BT_task));
     while (1) {
     }
     return 0;
