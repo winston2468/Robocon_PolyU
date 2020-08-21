@@ -279,7 +279,7 @@ void parseDS4(int buttons, int buttons2, int stick_lx, int stick_ly,
     if(share){
         autoMode = 0;
     }
-    servo_curr_pw = constrain(cross * 10 - triangle * 10 + servo_curr_pw, 1200, 2350);
+    servo_curr_pw = constrain(cross * 10 - triangle * 10 + servo_curr_pw, 1300, 1970);
     //pc.printf("%d\n\rservo\r\n",servo_curr_pw);
     servo_1.pulsewidth_us(servo_curr_pw);  
 
