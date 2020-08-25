@@ -193,11 +193,11 @@ Relay_State = 0;
     if(share){
         autoMode = 0;
     }
+    //1300 1800                                                                                                                                                                                                     
+    servo_curr_pw = constrain(cross * 5 - triangle * 5 + servo_curr_pw, 1400, 1700);
     
-    servo_curr_pw = constrain(cross * 10 - triangle * 10 + servo_curr_pw, 1300, 1970);
-    
-    if (servo_curr_pw != servo_old_pwm){
-        pc.printf("%d\r\n",servo_curr_pw);
+if (servo_curr_pw != servo_old_pwm){
+       // pc.printf("%d\r\n",servo_curr_pw);
     servo_1.pulsewidth_us(servo_curr_pw); 
     servo_old_pwm = servo_curr_pw;
     } 
