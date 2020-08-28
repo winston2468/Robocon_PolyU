@@ -132,7 +132,7 @@ void quad_omni::motorInitialization(int _acc, int _dec)
 //function that will be run repeatedly
 //i.e constanly update velocity
 //motor1 use id 1, refer to the action 
-void quad_omni::motorUpdate()
+void quad_omni::motorUpdate(float _vel_a)
 {
      
         // line movement; if the angle does not equal to the original one, turn it back when moving
@@ -144,34 +144,25 @@ void quad_omni::motorUpdate()
         else if(option == 1)
         {
             direction = 1;
-            vel_a = 80;
+            vel_a = 10;
         }
         // turn right
         else if(option == 2)
         {
             direction = -1;
-            vel_a = 80;
+            vel_a = 10;
         }
         else if(option == 3)
         {
             direction = 1;
-            vel_a = 10;
+            vel_a = _vel_a;
         }
         else if(option == 4)
         {
             direction = -1;
-            vel_a = 10;
+            vel_a = _vel_a;
         }
-        else if(option == 5)
-        {
-            direction = 1;
-            vel_a = 7;
-        }
-        else if(option == 6)
-        {
-            direction = -1;
-            vel_a = 7;
-        }
+
 
         motor1Speed = ceil(((float)vel_y * cos(theta + (PI / 4)) - (float)vel_x * sin(theta + (PI / 4)) + direction * vel_a * radius_r + vel_a_error * radius_r) / radius_w);
         motor2Speed = ceil(((float)vel_y * cos(theta + (3 * PI / 4)) - (float)vel_x * sin(theta + (3 * PI / 4)) + direction * vel_a * radius_r + vel_a_error * radius_r) / radius_w);
@@ -199,13 +190,10 @@ void quad_omni::motorUpdate()
         
         // set velocity;
         this->motor1->SetVelocity(-1*motor1Speed);
-        ThisThread::sleep_for(20);
         this->motor2->SetVelocity(motor2Speed);
-        ThisThread::sleep_for(20);
         this->motor3->SetVelocity(-1*motor3Speed);
-        ThisThread::sleep_for(20);
         this->motor4->SetVelocity(motor4Speed);
-        ThisThread::sleep_for(20);
+        
 }
 
 

@@ -31,7 +31,7 @@ void actionDrv::send(char* msg)
    //pc.printf("test3");
     actionDrv_mutex.unlock();
     //pc.printf("test4");
-    //ThisThread::sleep_for(5);
+    wait_us(2000);
       
 }
 

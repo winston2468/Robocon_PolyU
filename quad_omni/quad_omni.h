@@ -8,7 +8,7 @@ public:
   quad_omni(int, int, int, int, CAN*);
   void motorInitialization();
   void motorInitialization(int, int);
-  void motorUpdate();
+  void motorUpdate(float);
   void setAccelaration(int);
   void setDecelaration(int);
   void setVelocityX(int);
