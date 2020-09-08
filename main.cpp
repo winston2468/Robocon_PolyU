@@ -25,8 +25,8 @@ CAN* can1 = new CAN(PB_5, PB_6, 500000);
 Thread DS4_thread;
 Thread quad_omni_thread;
 PwmOut servo_1(PA_5);
-int servo_old_pwm = 1440;
- int servo_curr_pw = 1440;
+int servo_old_pwm = 1068;
+ int servo_curr_pw = 1068;
  int servo_max = 1970;
  int servo_min = 1300;
  int servo_backward_speed = 3;
@@ -144,10 +144,10 @@ Relay_State = 0;
 
 
     //1300 1800                                                                                                                                                                                                     
-    servo_curr_pw = constrain(cross * 5 - triangle * 5 + servo_curr_pw, 1400, 1700);
+    servo_curr_pw = constrain(cross *1 - triangle * 1 + servo_curr_pw, 1068, 1603);
     
 if (servo_curr_pw != servo_old_pwm){
-       // pc.printf("%d\r\n",servo_curr_pw);
+      //pc.printf("%d\r\n",servo_curr_pw);
     servo_1.pulsewidth_us(servo_curr_pw); 
     servo_old_pwm = servo_curr_pw;
     } 
@@ -393,7 +393,7 @@ pc.baud(115200);
     quad_omni_thread.start(callback(quad_omni_task));
     //DS4_thread.start(callback(xpad_task));
     servo_1.period_us (2500);
-    servo_1.pulsewidth_us(1440);
+    servo_1.pulsewidth_us(1068);
     
       DS4BT_thread.start(callback(DS4BT_task));
     while (1) {
